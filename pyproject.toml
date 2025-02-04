@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cxone_sarif"
+dynamic = ["version"]
+dependencies = [
+    "sarif-om==1.0.4",
+    "jsonpath-ng==1.7.0",
+    "jschema-to-python==1.2.3",
+    "dataclasses-json==0.6.7",
+    "https://github.com/checkmarx-ts/cxone-async-api/releases/download/1.0.3/cxone_api-1.0.3-py3-none-any.whl"
+]
+description = "CheckmarxOne Sarif Transformation API"
+requires-python = ">=3.9"
+
+[tool.setuptools]
+package-dir = {"cxone_sarif" = "cxone_sarif"}
+
+[tool.setuptools.dynamic]
+version = { attr = "cxone_sarif.__version__.__version__" }
