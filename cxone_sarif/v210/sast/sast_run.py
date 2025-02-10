@@ -14,27 +14,25 @@ from sarif_om import (Run,
                       RunAutomationDetails,
                       Tool)
 from cxone_api.low.sast_metadata import retrieve_scan_metadata, retrieve_scan_metrics
-from ..moveto.cxone_api.low.sast_results import retrieve_sast_scan_results
+from ...moveto.cxone_api.low.sast_results import retrieve_sast_scan_results
 from cxone_sarif.sast_query_cache import QueryCache
+from cxone_sarif.run_factory import RunFactory
 from jsonpath_ng import parse
-import uuid,requests,hashlib
+import uuid,requests,hashlib,urllib
+from pathlib import Path
 
 
 
-class SastRunTransformer:
+class SastRun(RunFactory):
 
-  __sast_guid = "79cc9d1f-6183-4e37-8656-ef1a16dac7eb"
   __metrics_scannedFiles = parse("$.scannedFilesPerLanguage")
   __results_queryIDs = parse("$.results[*].queryID")
 
   __cache = QueryCache ()
 
   @staticmethod
-  def __safeget(key : str, json : Dict) -> Any:
-    if key in json.keys():
-      return json[key]
-    else:
-      return None
+  def get_tool_guid() -> str:
+    return "79cc9d1f-6183-4e37-8656-ef1a16dac7eb"
 
   @staticmethod
   async def __partial_file_descriptor_factory(language : str, count : int) -> ReportingDescriptor:
@@ -60,22 +58,22 @@ class SastRunTransformer:
   @staticmethod
   async def __notifications_factory(metrics : Dict) -> List[ReportingDescriptor]:
     descriptors = []
-    found = SastRunTransformer.__metrics_scannedFiles.find(metrics)
+    found = SastRun.__metrics_scannedFiles.find(metrics)
 
     if len(found) > 0 and found[0].value is not None:
       reported = found[0].value
       for lang in reported.keys():
         if 'partiallyGoodFiles' in reported[lang].keys() and int(reported[lang]['partiallyGoodFiles']) > 0:
-          descriptors.append(await SastRunTransformer.__partial_file_descriptor_factory(lang, int(reported[lang]['partiallyGoodFiles'])))
+          descriptors.append(await SastRun.__partial_file_descriptor_factory(lang, int(reported[lang]['partiallyGoodFiles'])))
         if 'badFiles' in reported[lang].keys() and int(reported[lang]['badFiles']) > 0:
-          descriptors.append(await SastRunTransformer.__bad_file_descriptor_factory(lang, int(reported[lang]['badFiles'])))
+          descriptors.append(await SastRun.__bad_file_descriptor_factory(lang, int(reported[lang]['badFiles'])))
     
     return descriptors
   
   @staticmethod
   async def retrieve_sast_scan_results_cache_description(client : CxOneClient, **kwargs) -> requests.Response:
     response = await retrieve_sast_scan_results(client, **kwargs)
-    await SastRunTransformer.__cache.add (client, set([x.value for x in SastRunTransformer.__results_queryIDs.find(json_on_ok(response))]))
+    await SastRun.__cache.add (client, set([x.value for x in SastRun.__results_queryIDs.find(json_on_ok(response))]))
     return response
   
   @staticmethod
@@ -113,11 +111,7 @@ class SastRunTransformer:
     return Message(text=text, markdown=markdown)
   
   @staticmethod
-  def __camel_case(s : str) -> str:
-    return s.replace("_", " ").title().replace(" ", "")
-
-  @staticmethod
-  async def factory(client : CxOneClient, scan_id : str, platform : str, version : str, organization : str, info_uri : str) -> Run:
+  async def factory(client : CxOneClient, project_id : str, scan_id : str, platform : str, version : str, organization : str, info_uri : str) -> Run:
 
     metrics = json_on_ok(await retrieve_scan_metrics(client, scan_id))
 
@@ -125,18 +119,18 @@ class SastRunTransformer:
     results = []
     # Compile Result object array here along with an array of ReportingDescriptor objects
 
-    async for result in page_generator(SastRunTransformer.retrieve_sast_scan_results_cache_description, "results", client=client, scan_id=scan_id):
-      group = SastRunTransformer.__safeget("group", result)
-      query_name = SastRunTransformer.__safeget("queryName", result)
+    async for result in page_generator(SastRun.retrieve_sast_scan_results_cache_description, "results", client=client, scan_id=scan_id):
+      group = SastRun.get_value_safe("group", result)
+      query_name = SastRun.get_value_safe("queryName", result)
       queryId = int(result['queryID'])
       rule_id_key = f"{group}.{query_name}"
 
-      query_desc = await SastRunTransformer.__cache.get(client, queryId)
+      query_desc = await SastRun.__cache.get(client, queryId)
 
       if queryId not in rules.keys():
         rules[queryId] = ReportingDescriptor(
           id = rule_id_key,
-          name=SastRunTransformer.__camel_case(query_name),
+          name=SastRun.make_camel_case(query_name),
           short_description = MultiformatMessageString(text=query_desc['cause']),
           full_description = MultiformatMessageString(text=query_desc['risk']),
           help = MultiformatMessageString(text=query_desc['generalRecommendations']),
@@ -144,42 +138,66 @@ class SastRunTransformer:
             "queryID" : queryId,
           })
 
-
-      nodes = SastRunTransformer.__safeget("nodes", result)
+      nodes = SastRun.get_value_safe("nodes", result)
       locations = []
       filePathsFingerprint = hashlib.sha256()
       if nodes is not None:
         index = 0
         for node in nodes:
-          filePathsFingerprint.update(bytes(SastRunTransformer.__safeget("fileName", node), "UTF-8"))
+          filePathsFingerprint.update(bytes(SastRun.get_value_safe("fileName", node), "UTF-8"))
+
+          def calc_end_column(node : dict):
+            column_val = SastRun.get_value_safe("column", node)
+            if column_val is None:
+              return None
+
+            try:
+              column_val = int(column_val)
+            except Exception:
+              return None
+            
+            length_val = SastRun.get_value_safe("length", node)
+            if length_val is None:
+              return None
+            
+            try:
+              length_val = int(length_val)
+            except Exception:
+              return None
+            
+            if length_val - column_val < 0:
+              return column_val
+            else:
+              return length_val - column_val
+
           locations.append(
             Location(
               id=index, 
               physical_location=PhysicalLocation(
                 artifact_location=ArtifactLocation(
-                  uri=f"file:{SastRunTransformer.__safeget("fileName", node)}"
+                  uri=f"file:{SastRun.get_value_safe("fileName", node)}"
                 ),
               region=Region(
-                start_line=SastRunTransformer.__safeget("line", node),
-                start_column=SastRunTransformer.__safeget("column", node),
-                end_column=int(max(int(SastRunTransformer.__safeget("column", node)), 
-                                   int(SastRunTransformer.__safeget("length", node)) - int(SastRunTransformer.__safeget("column", node)))),
-                source_language=SastRunTransformer.__safeget("languageName", result),
+                start_line=SastRun.get_value_safe("line", node),
+                start_column=SastRun.get_value_safe("column", node),
+                end_column=calc_end_column(node),
+                source_language=SastRun.get_value_safe("languageName", result),
                 properties={
-                  "methodName" : SastRunTransformer.__safeget("method", node),
-                  "methodLine" : SastRunTransformer.__safeget("methodLine", node),
-                  "domType" : SastRunTransformer.__safeget("domType", node),
-                  "nodeID" : SastRunTransformer.__safeget("nodeID", node),
-                  "fullName" : SastRunTransformer.__safeget("fullName", node)
+                  "methodName" : SastRun.get_value_safe("method", node),
+                  "methodLine" : SastRun.get_value_safe("methodLine", node),
+                  "domType" : SastRun.get_value_safe("domType", node),
+                  "nodeID" : SastRun.get_value_safe("nodeID", node),
+                  "fullName" : SastRun.get_value_safe("fullName", node)
                 }
               ))))
           index += 1
 
       # partial_fingerprints
       results.append(Result(
-        message = SastRunTransformer.__sub_description_variables(query_desc['resultDescription'], nodes[0], nodes[-1:][0]),
+        message = SastRun.__sub_description_variables(query_desc['resultDescription'], nodes[0], nodes[-1:][0]),
         rule_id = rule_id_key,
         locations=locations,
+        hosted_viewer_uri=str(Path(client.display_endpoint) / Path(f"sast-results/{project_id}/{scan_id}?resultId={urllib.parse.quote_plus(result['pathSystemID'])}")),
         partial_fingerprints={
           "similarityID" : str(result['similarityID']),
           "queryKey" : rule_id_key,
@@ -201,7 +219,7 @@ class SastRunTransformer:
       ))
     
 
-    driver = ToolComponent(name="SAST", guid=SastRunTransformer.__sast_guid,
+    driver = ToolComponent(name="SAST", guid=SastRun.get_tool_guid(),
                            product_suite=platform,
                            full_name=f"Checkmarx SAST {version}",
                            short_description=MultiformatMessageString(text="A tool that performs static code analysis."),
@@ -209,7 +227,7 @@ class SastRunTransformer:
                            semantic_version=version,
                            information_uri=info_uri,
                            organization=organization,
-                           notifications = await SastRunTransformer.__notifications_factory(metrics),
+                           notifications = await SastRun.__notifications_factory(metrics),
                            rules = [r for r in rules.values()],
                            properties={
                              "scanMetrics" : metrics
@@ -225,9 +243,9 @@ class SastRunTransformer:
                results=results, 
                automation_details=RunAutomationDetails(
                  description=Message(text="Static analysis scan with CheckmarxOne SAST"),
-                 id=f"projectid/{SastRunTransformer.__safeget("projectId", metadata)}/scanid/{SastRunTransformer.__safeget("scanId", metadata)}",
-                 guid=SastRunTransformer.__safeget("scanId", metadata),
-                 correlation_guid=SastRunTransformer.__safeget("projectId", metadata)
+                 id=f"projectid/{SastRun.get_value_safe("projectId", metadata)}/scanid/{SastRun.get_value_safe("scanId", metadata)}",
+                 guid=SastRun.get_value_safe("scanId", metadata),
+                 correlation_guid=SastRun.get_value_safe("projectId", metadata)
                ),  
                column_kind="unicodeCodePoints")
   

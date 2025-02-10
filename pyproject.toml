@@ -10,6 +10,8 @@ dependencies = [
     "jsonpath-ng==1.7.0",
     "jschema-to-python==1.2.3",
     "dataclasses-json==0.6.7",
+    "docopt==0.6.2",
+    "aiofiles==24.1.0",
     "https://github.com/checkmarx-ts/cxone-async-api/releases/download/1.0.3/cxone_api-1.0.3-py3-none-any.whl"
 ]
 description = "CheckmarxOne Sarif Transformation API"
