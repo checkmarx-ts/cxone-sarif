@@ -71,7 +71,7 @@ class SastRun(RunFactory):
     return descriptors
   
   @staticmethod
-  async def retrieve_sast_scan_results_cache_description(client : CxOneClient, **kwargs) -> requests.Response:
+  async def __fetch_results_with_cached_descriptions(client : CxOneClient, **kwargs) -> requests.Response:
     response = await retrieve_sast_scan_results(client, **kwargs)
     await SastRun.__cache.add (client, set([x.value for x in SastRun.__results_queryIDs.find(json_on_ok(response))]))
     return response
@@ -117,9 +117,8 @@ class SastRun(RunFactory):
 
     rules = {}
     results = []
-    # Compile Result object array here along with an array of ReportingDescriptor objects
 
-    async for result in page_generator(SastRun.retrieve_sast_scan_results_cache_description, "results", client=client, scan_id=scan_id):
+    async for result in page_generator(SastRun.__fetch_results_with_cached_descriptions, "results", client=client, scan_id=scan_id):
       group = SastRun.get_value_safe("group", result)
       query_name = SastRun.get_value_safe("queryName", result)
       queryId = int(result['queryID'])
@@ -192,7 +191,6 @@ class SastRun(RunFactory):
               ))))
           index += 1
 
-      # partial_fingerprints
       results.append(Result(
         message = SastRun.__sub_description_variables(query_desc['resultDescription'], nodes[0], nodes[-1:][0]),
         rule_id = rule_id_key,
@@ -245,7 +243,6 @@ class SastRun(RunFactory):
                  description=Message(text="Static analysis scan with CheckmarxOne SAST"),
                  id=f"projectid/{SastRun.get_value_safe("projectId", metadata)}/scanid/{SastRun.get_value_safe("scanId", metadata)}",
                  guid=SastRun.get_value_safe("scanId", metadata),
-                 correlation_guid=SastRun.get_value_safe("projectId", metadata)
-               ),  
+                 correlation_guid=SastRun.get_value_safe("projectId", metadata)),  
                column_kind="unicodeCodePoints")
   

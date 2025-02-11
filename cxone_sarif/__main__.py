@@ -78,14 +78,14 @@ async def main():
     bootstrap(DEFAULT_LOGLEVEL if args['--level'] is None else args['--level'], 
               not args['-q'], args['--log-file'])
     
-    logger = logging.getLogger("main")
-    logger.info(f"{__agent__}/{__version__} start...")
+    _log = logging.getLogger("main")
+    _log.info(f"{__agent__}/{__version__} start...")
 
     if not os.path.isdir(args['--outdir']):
-      logger.error(f"Output directory {args['--outdir']} does not exist, exiting...")
+      _log.error(f"Output directory {args['--outdir']} does not exist, exiting...")
       exit(1)
     else:
-      logger.info(f"Report files will be written at: {args['--outdir']}")
+      _log.info(f"Report files will be written at: {args['--outdir']}")
 
 
     if args['--region'] is not None:
@@ -112,6 +112,10 @@ async def main():
                                                 api_endpoint, int(args['--timeout']), int(args['--retries']), proxy, not (args['-k']))
 
     concurrency = Semaphore(max(1, min(int(args['-t']), 8)))
+
+    if len(args['SCANIDS']) > len(set(args['SCANIDS'])):
+      _log.warning("Some scan ids that were defined multiple times, only one log will be produced per unique scan id.")
+
   
     await asyncio.wait([asyncio.get_running_loop().create_task(execute_on_scanid(client, 
                                                                                  scanid, 
@@ -131,7 +135,7 @@ async def main():
     exit(1)
 
 
-  logger.info(f"{__agent__}/{__version__} complete.")
+  _log.info(f"{__agent__}/{__version__} complete.")
 
 
 async def execute_on_scanid(client : cx.CxOneClient, scan_id : str, outdir : str, 

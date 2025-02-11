@@ -56,6 +56,21 @@ async def get_sarif_v210_log_for_scan(client : CxOneClient, skip_sast : bool, sk
 
     results = [x.result() for x in completed]
 
+    non_runs = [x for x in results if not isinstance(x, Run)]
+
+    if len(non_runs) > 0:
+      _log.warning(f"Some engine runs for scan {scan_id} did not produce a Run log entry.")
+
+      counter = 1
+      for nr in non_runs:
+        _log.debug("----- BEGIN: ERROR {counter} -----")
+        if isinstance(nr, Exception):
+          _log.exception(nr)
+        else:
+          _log.debug(nr)
+        _log.debug("----- END: ERROR {counter} -----")
+        counter += 1
+
     return SarifLog(runs = [x for x in results if isinstance(x, Run)], 
                 version="2.1.0", 
                 schema_uri="https://docs.oasis-open.org/sarif/sarif/v2.1.0/cs01/schemas/sarif-external-property-file-schema-2.1.0.json",
@@ -70,9 +85,11 @@ async def get_sarif_v210_log_for_scan(client : CxOneClient, skip_sast : bool, sk
 
   except ResponseException as rex:
     runs = None
+    _log.warning(f"No Run log entries created for scan {scan_id} due to error.")
     _log.exception(ex)
   except Exception as ex:
     # 3.13.4 - runs is null if there is an error finding the results.
     runs = None
+    _log.warning(f"No Run log entries created for scan {scan_id} due to error.")
     _log.exception(ex)
 
