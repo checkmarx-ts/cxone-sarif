@@ -1,4 +1,4 @@
-from .v210 import get_sast_run
+from .v210 import get_sast_run, get_sca_run
 from cxone_api import CxOneClient
 from cxone_api.exceptions import ResponseException
 from sarif_om import SarifLog, Run
@@ -49,6 +49,9 @@ async def get_sarif_v210_log_for_scan(client : CxOneClient, skip_sast : bool, sk
     futures = []
     if not skip_sast and 'sast' in engines:
       futures.append(asyncio.get_running_loop().create_task(get_sast_run(client, scan_details['projectId'], scan_id, PLATFORM_NAME, versions, __org, __info_uri)))
+
+    if not skip_sca and 'sca' in engines:
+      futures.append(asyncio.get_running_loop().create_task(get_sca_run(client, scan_details['projectId'], scan_id, PLATFORM_NAME, versions, __org, __info_uri)))
 
     completed, _ = await asyncio.wait(futures)
 

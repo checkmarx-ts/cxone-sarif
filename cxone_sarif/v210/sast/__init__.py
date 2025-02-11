@@ -1,6 +1,5 @@
 from cxone_api import CxOneClient
 from cxone_sarif.moveto.cxone_api.high.util import CxOneVersions
-from cxone_api import CxOneClient
 from sarif_om import Run
 from .sast_run import SastRun
 

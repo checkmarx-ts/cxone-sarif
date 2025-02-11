@@ -10,6 +10,7 @@ from cxone_sarif.__agent__ import __agent__
 from cxone_sarif.__version__ import __version__
 from jschema_to_python.to_json import to_json
 
+
 DEFAULT_LOGLEVEL="INFO"
 
 async def main():
@@ -116,15 +117,15 @@ async def main():
     if len(args['SCANIDS']) > len(set(args['SCANIDS'])):
       _log.warning("Some scan ids that were defined multiple times, only one log will be produced per unique scan id.")
 
-  
-    await asyncio.wait([asyncio.get_running_loop().create_task(execute_on_scanid(client, 
-                                                                                 scanid, 
-                                                                                 args['--outdir'], 
-                                                                                 args['--no-sast'],  
-                                                                                 args['--no-sca'],  
-                                                                                 args['--no-kics'], 
-                                                                                 args['--no-apisec'],
-                                                                                 concurrency)) for scanid in set(args['SCANIDS'])])
+    await asyncio.wait([asyncio.get_running_loop()
+                         .create_task(execute_on_scanid(client, 
+                                                        scanid, 
+                                                        args['--outdir'], 
+                                                        args['--no-sast'],  
+                                                        args['--no-sca'],  
+                                                        args['--no-kics'], 
+                                                        args['--no-apisec'],
+                                                        concurrency)) for scanid in set(args['SCANIDS'])])
     
   except DocoptExit as bad_args:
     print("Incorrect arguments provided.")
@@ -146,7 +147,7 @@ async def execute_on_scanid(client : cx.CxOneClient, scan_id : str, outdir : str
     log = logging.getLogger(f"execute_on_scanid:{scan_id}")
     try:
 
-      sarif_log = await get_sarif_v210_log_for_scan(client, skip_sast, skip_sca, skip_kics, skip_apisec, scan_id)
+      sarif_log = await get_sarif_v210_log_for_scan(client, skip_sast, skip_sca, skip_kics, skip_apisec, sbom_opts, scan_id)
       
       async with aiofiles.open(Path(outdir) / f"{scan_id}.sarif", "wt") as fp:
         await fp.write(to_json(sarif_log))
