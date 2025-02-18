@@ -147,7 +147,7 @@ async def execute_on_scanid(client : cx.CxOneClient, scan_id : str, outdir : str
     log = logging.getLogger(f"execute_on_scanid:{scan_id}")
     try:
 
-      sarif_log = await get_sarif_v210_log_for_scan(client, skip_sast, skip_sca, skip_kics, skip_apisec, sbom_opts, scan_id)
+      sarif_log = await get_sarif_v210_log_for_scan(client, skip_sast, skip_sca, skip_kics, skip_apisec, scan_id)
       
       async with aiofiles.open(Path(outdir) / f"{scan_id}.sarif", "wt") as fp:
         await fp.write(to_json(sarif_log))

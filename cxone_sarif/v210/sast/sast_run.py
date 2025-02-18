@@ -241,8 +241,8 @@ class SastRun(RunFactory):
                results=results, 
                automation_details=RunAutomationDetails(
                  description=Message(text="Static analysis scan with CheckmarxOne SAST"),
-                 id=f"projectid/{SastRun.get_value_safe("projectId", metadata)}/scanid/{SastRun.get_value_safe("scanId", metadata)}",
-                 guid=SastRun.get_value_safe("scanId", metadata),
-                 correlation_guid=SastRun.get_value_safe("projectId", metadata)),  
+                 id=f"projectid/{project_id}/scanid/{scan_id}",
+                 guid=scan_id,
+                 correlation_guid=project_id),  
                column_kind="unicodeCodePoints")
   

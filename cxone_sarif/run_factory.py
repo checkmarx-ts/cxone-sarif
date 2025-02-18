@@ -1,4 +1,5 @@
 from typing import Dict, Any
+from sarif_om import Run
 
 class RunFactory:
 
@@ -17,7 +18,7 @@ class RunFactory:
     else:
       return None
 
-
   @staticmethod
   def make_camel_case(s : str) -> str:
     return s.replace("_", " ").title().replace(" ", "")
+  
