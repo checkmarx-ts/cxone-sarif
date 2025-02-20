@@ -129,7 +129,7 @@ class SastRun(RunFactory):
       if queryId not in rules.keys():
         rules[queryId] = ReportingDescriptor(
           id = rule_id_key,
-          name=SastRun.make_camel_case(query_name),
+          name=SastRun.make_pascal_case(query_name),
           short_description = MultiformatMessageString(text=query_desc['cause']),
           full_description = MultiformatMessageString(text=query_desc['risk']),
           help = MultiformatMessageString(text=query_desc['generalRecommendations']),
@@ -164,10 +164,8 @@ class SastRun(RunFactory):
             except Exception:
               return None
             
-            if length_val - column_val < 0:
-              return column_val
-            else:
-              return length_val - column_val
+            return column_val + length_val
+          
 
           locations.append(
             Location(
@@ -220,7 +218,7 @@ class SastRun(RunFactory):
     driver = ToolComponent(name="SAST", guid=SastRun.get_tool_guid(),
                            product_suite=platform,
                            full_name=f"Checkmarx SAST {version}",
-                           short_description=MultiformatMessageString(text="A tool that performs static code analysis."),
+                           short_description=MultiformatMessageString(text="Static code analysis scanner."),
                            # 3.19.2 at least one of version or semanticVersion SHOULD be present
                            semantic_version=version,
                            information_uri=info_uri,

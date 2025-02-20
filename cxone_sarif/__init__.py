@@ -1,13 +1,14 @@
 from .v210 import get_sast_run, get_sca_run
 from cxone_api import CxOneClient
 from cxone_api.exceptions import ResponseException
-from sarif_om import SarifLog, Run
+from sarif_om import SarifLog, Run, VersionControlDetails
 from .__agent__ import __agent__
 from .__version__ import __version__
 from .moveto.cxone_api.high.util import CxOneVersions
 from cxone_api.util import json_on_ok
 from cxone_api.low.scans import retrieve_scan_details
 from jsonpath_ng import parse
+from typing import Dict
 import logging, asyncio
 
 
@@ -27,7 +28,37 @@ PLATFORM_NAME="CheckmarxOne"
 async def get_sarif_v210_log_for_scan(client : CxOneClient, skip_sast : bool, skip_sca : bool, skip_kics : bool, 
                                         skip_apisec : bool, scan_id : str) -> SarifLog:
 
-  _log = logging.getLogger(f"improved_report_to_sarif_v210:{scan_id}")
+  def version_control_details_factory(scan_details : Dict) -> VersionControlDetails:
+    __handler_type = parse("$.metadata.type")
+    __git_repo_url = parse("$.metadata.Handler.GitHandler.repo_url")
+
+    repo_url = None
+    handler = __handler_type.find(scan_details).pop().value
+
+    if handler == "git":
+      repo_url = __git_repo_url.find(scan_details).pop().value
+
+    if repo_url is None:
+      repo_url = "uri:unknown"
+
+    return VersionControlDetails(
+      repository_uri = repo_url,
+      branch = scan_details['branch'],
+      as_of_time_utc = scan_details['createdAt'],
+      properties = {
+        "sourceType" : scan_details['sourceType'],
+        "sourceOrigin" : scan_details['sourceOrigin'],
+        "initiator" : scan_details['initiator'],
+        "userAgent" : scan_details['userAgent'],
+      }
+    )
+
+
+
+
+
+
+  _log = logging.getLogger(f"get_sarif_v210_log_for_scan:{scan_id}")
 
   __info_uri = "https://checkmarx.com/resource/documents/en/34965-67042-checkmarx-one.html"
   __org = "Checkmarx"
@@ -58,6 +89,11 @@ async def get_sarif_v210_log_for_scan(client : CxOneClient, skip_sast : bool, sk
     _log.info("SARIF log complete")
 
     results = [x.result() for x in completed]
+
+    vc_details = version_control_details_factory(scan_details)
+
+    for run in results:
+      run.version_control_provenance = [vc_details]
 
     non_runs = [x for x in results if not isinstance(x, Run)]
 

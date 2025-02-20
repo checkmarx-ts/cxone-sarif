@@ -20,5 +20,9 @@ class RunFactory:
 
   @staticmethod
   def make_camel_case(s : str) -> str:
-    return s.replace("_", " ").title().replace(" ", "")
+    out = RunFactory.make_pascal_case(s)
+    return (out[0].lower() + out[1:])
   
+  @staticmethod
+  def make_pascal_case(s : str) -> str:
+    return "".join([x.capitalize() for x in s.replace("_", " ").replace("-"," ").split(" ")])
