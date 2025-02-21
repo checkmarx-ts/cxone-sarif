@@ -21,8 +21,19 @@ from cxone_sarif.run_factory import RunFactory
 from jsonpath_ng import parse
 import uuid,requests,hashlib,urllib
 from pathlib import Path
+from dataclasses import dataclass
+from dataclasses_json import dataclass_json
 
-
+@dataclass_json
+@dataclass(frozen=True)
+class ApiSecResult:
+  risk_id : str
+  http_method : str
+  endpoint_path : str
+  similarityID : str
+  line_num : int
+  source_file : str
+  source_node : str
 
 class SastRun(RunFactory):
 
@@ -78,7 +89,7 @@ class SastRun(RunFactory):
     return response
   
   @staticmethod
-  def __sub_description_variables(description : str, source_node : Dict, sink_node : Dict) -> Message:
+  def __make_description(description : str, source_node : Dict, sink_node : Dict, apisec_results : List[ApiSecResult]) -> Message:
     text = markdown = description
 
     def get_or_unknown(node, key):
@@ -108,38 +119,54 @@ class SastRun(RunFactory):
         .replace("@DestinationMethod", f"**{get_or_unknown(sink_node, 'method')}**") \
         .replace("@DestinationLine", f"**{str(get_or_unknown(sink_node, 'line'))}**") \
         .replace("@DestinationElement", f"**{get_or_unknown(sink_node, 'name')}**")
+      
+      if apisec_results is not None:
+        text += "\n\nAPI Endpoints:\n"
+        markdown += "\n\n**API Endpoints:**\n"
+
+        for ares in apisec_results:
+          text += f"{ares.http_method} {ares.endpoint_path}\n"
+          markdown += f"* {ares.http_method} {ares.endpoint_path}\n"
 
     return Message(text=text, markdown=markdown)
-  
 
   @staticmethod
-  async def __make_apisec_index(client : CxOneClient, scan_id : str) -> Dict:
+  async def __ApiSecResult_factory(client : CxOneClient, risk_result : Dict) -> ApiSecResult:
+
+    risk_id = SastRun.get_value_safe("risk_id", risk_result)
+    risk_details = json_on_ok(await retrieve_risk_details(client, risk_id))
+
+    return ApiSecResult(
+      risk_id=risk_id,
+      http_method=SastRun.get_value_safe("http_method", risk_result),
+      endpoint_path=SastRun.get_value_safe("url", risk_result),
+      similarityID=SastRun.get_value_safe("similarity_id", risk_details),
+      line_num=SastRun.get_value_safe("line_number", risk_details),
+      source_file=SastRun.get_value_safe("source_file", risk_details),
+      source_node=SastRun.get_value_safe("source_node", risk_details),
+    )
+
+  @staticmethod
+  async def __make_apisec_index(client : CxOneClient, scan_id : str) -> Dict[str, Dict[str, ApiSecResult]]:
+    index = {}
 
     async for risk in page_generator(retrieve_apisec_security_risks, "entries", "page", 1, client=client, scan_id=scan_id):
-      print(risk)
-      pass
+      key = SastRun.get_value_safe("sast_risk_id", risk)
+      method = SastRun.get_value_safe("http_method", risk)
 
-
-
+      if key not in index.keys():
+        index[key] = {method : await SastRun.__ApiSecResult_factory(client, risk)}
+      elif method not in index[key].keys():
+        index[key][method] = await SastRun.__ApiSecResult_factory(client, risk)
+    
+    return index
+  
   @staticmethod
   async def factory(client : CxOneClient, omit_apisec : bool, project_id : str, scan_id : str, 
                     platform : str, version : str, organization : str, info_uri : str) -> Run:
 
 
     apisec_index = await SastRun.__make_apisec_index(client, scan_id) if not omit_apisec else {}
-
-
-    # if not opts.SkipApi and 'apisec' in engines:
-      # /apisec/static/api/risks/<scanid>
-      # Get the risks, sast risk id appears to be the correlation to SAST results?
-      #
-      #/apisec/static/api/risks/risk/<riskid>
-      # file location, status, state, region info, simid
-      #
-      # Results appear to link to SAST results and have a link to parameters.
-      # use sast-results API with result-id containing urlencoded sast_risk_id value
-      # 
-      # pass
 
     metrics = json_on_ok(await retrieve_scan_metrics(client, scan_id))
 
@@ -217,17 +244,8 @@ class SastRun(RunFactory):
               ))))
           index += 1
 
-      results.append(Result(
-        message = SastRun.__sub_description_variables(query_desc['resultDescription'], nodes[0], nodes[-1:][0]),
-        rule_id = rule_id_key,
-        locations=locations,
-        hosted_viewer_uri=str(Path(client.display_endpoint) / Path(f"sast-results/{project_id}/{scan_id}?resultId={urllib.parse.quote_plus(result['pathSystemID'])}")),
-        partial_fingerprints={
-          "similarityID" : str(result['similarityID']),
-          "queryKey" : rule_id_key,
-          "nodeFilePathsSha256" : filePathsFingerprint.hexdigest(),
-        },
-        properties={
+
+      props = {
           "state" : result['state'],
           "status" : result['status'],
           "severity" : result['severity'],
@@ -240,6 +258,24 @@ class SastRun(RunFactory):
           "confidenceLevel" : result['confidenceLevel'],
           "compliances" : result['compliances'],
         }
+          
+      if not omit_apisec and result['resultHash'] in apisec_index.keys():
+        api_sec_props = list(apisec_index[result['resultHash']].values())
+        props['apisec'] = [x.to_dict() for x in api_sec_props]
+      else:
+        api_sec_props = None
+
+      results.append(Result(
+        message = SastRun.__make_description(query_desc['resultDescription'], nodes[0], nodes[-1:][0], api_sec_props),
+        rule_id = rule_id_key,
+        locations=locations,
+        hosted_viewer_uri=f"{client.display_endpoint.rstrip("/")}/" + str(Path(f"sast-results/{project_id}/{scan_id}?resultId={urllib.parse.quote_plus(result['pathSystemID'])}")),
+        partial_fingerprints={
+          "similarityID" : str(result['similarityID']),
+          "queryKey" : rule_id_key,
+          "nodeFilePathsSha256" : filePathsFingerprint.hexdigest(),
+        },
+        properties=props
       ))
     
 
