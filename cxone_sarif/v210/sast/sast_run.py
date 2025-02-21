@@ -129,7 +129,7 @@ class SastRun(RunFactory):
       if queryId not in rules.keys():
         rules[queryId] = ReportingDescriptor(
           id = rule_id_key,
-          name=SastRun.make_pascal_case(query_name),
+          name=SastRun.make_pascal_case_identifier(query_name),
           short_description = MultiformatMessageString(text=query_desc['cause']),
           full_description = MultiformatMessageString(text=query_desc['risk']),
           help = MultiformatMessageString(text=query_desc['generalRecommendations']),

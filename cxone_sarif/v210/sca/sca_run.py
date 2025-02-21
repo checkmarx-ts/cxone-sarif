@@ -71,7 +71,7 @@ class ScaRun(RunFactory):
       if vuln_id not in rules.keys():
         rules[vuln_id] = ReportingDescriptor(
           id = vuln_id,
-          name = ScaRun.make_pascal_case(f"Advisory {cve_id}"),
+          name = ScaRun.make_pascal_case_identifier(f"Advisory {cve_id}"),
           help_uri = ScaRun.__make_help_url(client, cve_id),
           help = MultiformatMessageString(text="See published description."),
           short_description = MultiformatMessageString(text=cve_id),

@@ -1,6 +1,7 @@
-from .v210 import get_sast_run, get_sca_run
+from .v210 import get_sast_run, get_sca_run, get_iac_run
 from cxone_api import CxOneClient
 from cxone_api.exceptions import ResponseException
+from cxone_sarif.opts import ReportOpts
 from sarif_om import SarifLog, Run, VersionControlDetails
 from .__agent__ import __agent__
 from .__version__ import __version__
@@ -25,8 +26,7 @@ PLATFORM_NAME="CheckmarxOne"
     A SarifLog element containing scan results for any engines executed during the scan.
 
 """
-async def get_sarif_v210_log_for_scan(client : CxOneClient, skip_sast : bool, skip_sca : bool, skip_kics : bool, 
-                                        skip_apisec : bool, scan_id : str) -> SarifLog:
+async def get_sarif_v210_log_for_scan(client : CxOneClient, opts : ReportOpts, scan_id : str) -> SarifLog:
 
   def version_control_details_factory(scan_details : Dict) -> VersionControlDetails:
     __handler_type = parse("$.metadata.type")
@@ -48,15 +48,8 @@ async def get_sarif_v210_log_for_scan(client : CxOneClient, skip_sast : bool, sk
       properties = {
         "sourceType" : scan_details['sourceType'],
         "sourceOrigin" : scan_details['sourceOrigin'],
-        "initiator" : scan_details['initiator'],
-        "userAgent" : scan_details['userAgent'],
       }
     )
-
-
-
-
-
 
   _log = logging.getLogger(f"get_sarif_v210_log_for_scan:{scan_id}")
 
@@ -78,11 +71,21 @@ async def get_sarif_v210_log_for_scan(client : CxOneClient, skip_sast : bool, sk
 
     # 3.13.4 - runs is empty if there are no results.
     futures = []
-    if not skip_sast and 'sast' in engines:
+    if not opts.SkipSast and 'sast' in engines:
       futures.append(asyncio.get_running_loop().create_task(get_sast_run(client, scan_details['projectId'], scan_id, PLATFORM_NAME, versions, __org, __info_uri)))
 
-    if not skip_sca and 'sca' in engines:
+    if not opts.SkipSca and 'sca' in engines:
       futures.append(asyncio.get_running_loop().create_task(get_sca_run(client, scan_details['projectId'], scan_id, PLATFORM_NAME, versions, __org, __info_uri)))
+
+    if not opts.SkipKics and 'kics' in engines:
+      futures.append(asyncio.get_running_loop().create_task(get_iac_run(client, scan_details['projectId'], scan_id, PLATFORM_NAME, versions, __org, __info_uri)))
+
+    if not opts.SkipApi and 'apisec' in engines:
+      pass
+
+    if not opts.SkipContainers and 'containers' in engines:
+      pass
+
 
     completed, _ = await asyncio.wait(futures)
 

@@ -19,10 +19,21 @@ class RunFactory:
       return None
 
   @staticmethod
-  def make_camel_case(s : str) -> str:
-    out = RunFactory.make_pascal_case(s)
+  def __prep_identifier(s : str) -> str:
+    non_alphanum = [c for c in s if not c.isalnum() and not c.isspace()]
+
+    clean = s
+
+    for c in non_alphanum:
+      clean = clean.replace(c, " ")
+
+    return " ".join([item for item in clean.split(" ") if len(item) > 0])
+
+  @staticmethod
+  def make_camel_case_identifier(s : str) -> str:
+    out = RunFactory.make_pascal_case_identifier(s)
     return (out[0].lower() + out[1:])
   
   @staticmethod
-  def make_pascal_case(s : str) -> str:
-    return "".join([x.capitalize() for x in s.replace("_", " ").replace("-"," ").split(" ")])
+  def make_pascal_case_identifier(s : str) -> str:
+    return "".join([x.capitalize() for x in RunFactory.__prep_identifier(s).split(" ")])

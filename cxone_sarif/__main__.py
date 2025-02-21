@@ -6,6 +6,7 @@ from docopt import DocoptExit
 import cxone_api as cx
 from cxone_sarif.cxone_sarif_logging import bootstrap
 from cxone_sarif import get_sarif_v210_log_for_scan
+from cxone_sarif.opts import ReportOpts
 from cxone_sarif.__agent__ import __agent__
 from cxone_sarif.__version__ import __version__
 from jschema_to_python.to_json import to_json
@@ -16,7 +17,7 @@ DEFAULT_LOGLEVEL="INFO"
 async def main():
   """Usage: cxone-sarif --tenant TENANT (--region=REGION | (--url=URL --iam-url=IAMURL)) (--api-key APIKEY | (--client OCLIENT --secret OSECRET)) 
                    [--level LOGLEVEL] [--log-file LOGFILE] [--timeout TIMEOUT] [--retries RETRIES] [--proxy IP:PORT] 
-                   [--outdir OUTDIR] [--no-sast] [--no-sca] [--no-kics] [--no-apisec] [-qk] [-t THREADS] SCANIDS... 
+                   [--outdir OUTDIR] [--no-sast] [--no-sca] [--no-kics] [--no-apisec] [--no-containers] [-qk] [-t THREADS] SCANIDS... 
 
   SCANIDS...          One or more scan ids that will each generate a file containing a SARIF log.
 
@@ -52,10 +53,11 @@ async def main():
 
   
   SARIF Log Generation Options:
-  --no-sast           Suppress SAST results.
-  --no-sca            Suppress SCA results.
-  --no-kics           Suppress KICS results.
-  --no-apisec         Suppress APISEC results.
+  --no-sast           Suppress static code analysis scan results.
+  --no-sca            Suppress software composition analysis scan results.
+  --no-kics           Suppress infrastructure as code scan results.
+  --no-apisec         Suppress API security scan results.
+  --no-containers     Suppress container security scan results.
   
   --outdir OUTDIR     Directory where to write the SARIF log files.   [default: .]
 
@@ -120,11 +122,14 @@ async def main():
     await asyncio.wait([asyncio.get_running_loop()
                          .create_task(execute_on_scanid(client, 
                                                         scanid, 
-                                                        args['--outdir'], 
-                                                        args['--no-sast'],  
-                                                        args['--no-sca'],  
-                                                        args['--no-kics'], 
-                                                        args['--no-apisec'],
+                                                        args['--outdir'],
+                                                        ReportOpts(
+                                                          SkipSast=args['--no-sast'],  
+                                                          SkipSca=args['--no-sca'],  
+                                                          SkipKics=args['--no-kics'], 
+                                                          SkipApi=args['--no-apisec'],
+                                                          SkipContainers=args['--no-containers'],
+                                                        ),
                                                         concurrency)) for scanid in set(args['SCANIDS'])])
     
   except DocoptExit as bad_args:
@@ -139,15 +144,17 @@ async def main():
   _log.info(f"{__agent__}/{__version__} complete.")
 
 
-async def execute_on_scanid(client : cx.CxOneClient, scan_id : str, outdir : str, 
-                            skip_sast : bool, skip_sca : bool, skip_kics : bool,
-                            skip_apisec : bool, concurrency : Semaphore) -> None:
+async def execute_on_scanid(client : cx.CxOneClient, 
+                            scan_id : str, 
+                            outdir : str, 
+                            opts : ReportOpts,
+                            concurrency : Semaphore) -> None:
   
   async with concurrency:
     log = logging.getLogger(f"execute_on_scanid:{scan_id}")
     try:
 
-      sarif_log = await get_sarif_v210_log_for_scan(client, skip_sast, skip_sca, skip_kics, skip_apisec, scan_id)
+      sarif_log = await get_sarif_v210_log_for_scan(client, opts, scan_id)
       
       async with aiofiles.open(Path(outdir) / f"{scan_id}.sarif", "wt") as fp:
         await fp.write(to_json(sarif_log))
