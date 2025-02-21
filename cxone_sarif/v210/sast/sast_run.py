@@ -14,7 +14,8 @@ from sarif_om import (Run,
                       RunAutomationDetails,
                       Tool)
 from cxone_api.low.sast_metadata import retrieve_scan_metadata, retrieve_scan_metrics
-from ...moveto.cxone_api.low.sast_results import retrieve_sast_scan_results
+from cxone_api.low.sast_results import retrieve_sast_scan_results
+from cxone_api.low.api import retrieve_apisec_security_risks, retrieve_risk_details
 from cxone_sarif.sast_query_cache import QueryCache
 from cxone_sarif.run_factory import RunFactory
 from jsonpath_ng import parse
@@ -110,8 +111,35 @@ class SastRun(RunFactory):
 
     return Message(text=text, markdown=markdown)
   
+
   @staticmethod
-  async def factory(client : CxOneClient, project_id : str, scan_id : str, platform : str, version : str, organization : str, info_uri : str) -> Run:
+  async def __make_apisec_index(client : CxOneClient, scan_id : str) -> Dict:
+
+    async for risk in page_generator(retrieve_apisec_security_risks, "entries", "page", 1, client=client, scan_id=scan_id):
+      print(risk)
+      pass
+
+
+
+  @staticmethod
+  async def factory(client : CxOneClient, omit_apisec : bool, project_id : str, scan_id : str, 
+                    platform : str, version : str, organization : str, info_uri : str) -> Run:
+
+
+    apisec_index = await SastRun.__make_apisec_index(client, scan_id) if not omit_apisec else {}
+
+
+    # if not opts.SkipApi and 'apisec' in engines:
+      # /apisec/static/api/risks/<scanid>
+      # Get the risks, sast risk id appears to be the correlation to SAST results?
+      #
+      #/apisec/static/api/risks/risk/<riskid>
+      # file location, status, state, region info, simid
+      #
+      # Results appear to link to SAST results and have a link to parameters.
+      # use sast-results API with result-id containing urlencoded sast_risk_id value
+      # 
+      # pass
 
     metrics = json_on_ok(await retrieve_scan_metrics(client, scan_id))
 

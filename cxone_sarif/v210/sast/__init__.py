@@ -1,9 +1,10 @@
 from cxone_api import CxOneClient
-from cxone_sarif.moveto.cxone_api.high.util import CxOneVersions
+from cxone_api.high.util import CxOneVersions
+from cxone_sarif.opts import SastOpts
 from sarif_om import Run
 from .sast_run import SastRun
 
 
-async def get_sast_run(client : CxOneClient, project_id : str, scan_id : str, platform : str, versions : CxOneVersions, 
+async def get_sast_run(client : CxOneClient, opts : SastOpts, project_id : str, scan_id : str, platform : str, versions : CxOneVersions, 
                        organization : str, info_uri : str) -> Run:
-  return await SastRun.factory(client, project_id, scan_id, platform, versions.SAST, organization, info_uri)
+  return await SastRun.factory(client, opts.OmitApiResults, project_id, scan_id, platform, versions.SAST, organization, info_uri)

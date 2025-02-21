@@ -1,7 +1,7 @@
 from cxone_sarif.run_factory import RunFactory
 from cxone_api import CxOneClient
 from cxone_api.util import page_generator
-from ...moveto.cxone_api.low.iac import retrieve_iac_security_scan_results
+from cxone_api.low.iac import retrieve_iac_security_scan_results
 from pathlib import Path
 import urllib
 from sarif_om import (Run,

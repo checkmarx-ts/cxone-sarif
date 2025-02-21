@@ -2,7 +2,7 @@ from cxone_api import CxOneClient
 from typing import Iterable, Any, List
 from cxone_api.util import json_on_ok
 import asyncio
-from cxone_sarif.moveto.cxone_api.low.sast_queries import get_sast_query_description
+from cxone_api.low.sast_queries import get_sast_query_description
 
 class QueryCache:
 

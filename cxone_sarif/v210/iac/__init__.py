@@ -1,5 +1,5 @@
 from cxone_api import CxOneClient
-from cxone_sarif.moveto.cxone_api.high.util import CxOneVersions
+from cxone_api.high.util import CxOneVersions
 from sarif_om import Run
 from .iac_run import IaCRun
 

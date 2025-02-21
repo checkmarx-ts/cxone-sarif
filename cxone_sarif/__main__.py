@@ -6,7 +6,7 @@ from docopt import DocoptExit
 import cxone_api as cx
 from cxone_sarif.cxone_sarif_logging import bootstrap
 from cxone_sarif import get_sarif_v210_log_for_scan
-from cxone_sarif.opts import ReportOpts
+from cxone_sarif.opts import ReportOpts, SastOpts
 from cxone_sarif.__agent__ import __agent__
 from cxone_sarif.__version__ import __version__
 from jschema_to_python.to_json import to_json
@@ -17,7 +17,7 @@ DEFAULT_LOGLEVEL="INFO"
 async def main():
   """Usage: cxone-sarif --tenant TENANT (--region=REGION | (--url=URL --iam-url=IAMURL)) (--api-key APIKEY | (--client OCLIENT --secret OSECRET)) 
                    [--level LOGLEVEL] [--log-file LOGFILE] [--timeout TIMEOUT] [--retries RETRIES] [--proxy IP:PORT] 
-                   [--outdir OUTDIR] [--no-sast] [--no-sca] [--no-kics] [--no-apisec] [--no-containers] [-qk] [-t THREADS] SCANIDS... 
+                   [--outdir OUTDIR] [--no-sast] [--no-sast-apisec] [--no-sca] [--no-kics] [--no-containers] [-qk] [-t THREADS] SCANIDS... 
 
   SCANIDS...          One or more scan ids that will each generate a file containing a SARIF log.
 
@@ -54,9 +54,12 @@ async def main():
   
   SARIF Log Generation Options:
   --no-sast           Suppress static code analysis scan results.
+  --no-sast-apisec         Do not augment SAST results with API security scan results.
+
   --no-sca            Suppress software composition analysis scan results.
+  
   --no-kics           Suppress infrastructure as code scan results.
-  --no-apisec         Suppress API security scan results.
+  
   --no-containers     Suppress container security scan results.
   
   --outdir OUTDIR     Directory where to write the SARIF log files.   [default: .]
@@ -124,10 +127,9 @@ async def main():
                                                         scanid, 
                                                         args['--outdir'],
                                                         ReportOpts(
-                                                          SkipSast=args['--no-sast'],  
+                                                          SastOpts=SastOpts(SkipSast=args['--no-sast'], OmitApiResults=args['--no-sast-apisec']),  
                                                           SkipSca=args['--no-sca'],  
                                                           SkipKics=args['--no-kics'], 
-                                                          SkipApi=args['--no-apisec'],
                                                           SkipContainers=args['--no-containers'],
                                                         ),
                                                         concurrency)) for scanid in set(args['SCANIDS'])])

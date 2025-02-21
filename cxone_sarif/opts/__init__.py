@@ -1,10 +1,13 @@
 from dataclasses import dataclass
 
+@dataclass(frozen=True)
+class SastOpts:
+  SkipSast : bool
+  OmitApiResults : bool
 
 @dataclass(frozen=True)
 class ReportOpts:
-  SkipSast : bool
+  SastOpts : SastOpts
   SkipSca : bool
   SkipKics : bool
-  SkipApi : bool
   SkipContainers : bool

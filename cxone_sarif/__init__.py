@@ -5,7 +5,7 @@ from cxone_sarif.opts import ReportOpts
 from sarif_om import SarifLog, Run, VersionControlDetails
 from .__agent__ import __agent__
 from .__version__ import __version__
-from .moveto.cxone_api.high.util import CxOneVersions
+from cxone_api.high.util import CxOneVersions
 from cxone_api.util import json_on_ok
 from cxone_api.low.scans import retrieve_scan_details
 from jsonpath_ng import parse
@@ -71,17 +71,14 @@ async def get_sarif_v210_log_for_scan(client : CxOneClient, opts : ReportOpts, s
 
     # 3.13.4 - runs is empty if there are no results.
     futures = []
-    if not opts.SkipSast and 'sast' in engines:
-      futures.append(asyncio.get_running_loop().create_task(get_sast_run(client, scan_details['projectId'], scan_id, PLATFORM_NAME, versions, __org, __info_uri)))
+    if not opts.SastOpts.SkipSast and 'sast' in engines:
+      futures.append(asyncio.get_running_loop().create_task(get_sast_run(client, opts.SastOpts, scan_details['projectId'], scan_id, PLATFORM_NAME, versions, __org, __info_uri)))
 
     if not opts.SkipSca and 'sca' in engines:
       futures.append(asyncio.get_running_loop().create_task(get_sca_run(client, scan_details['projectId'], scan_id, PLATFORM_NAME, versions, __org, __info_uri)))
 
     if not opts.SkipKics and 'kics' in engines:
       futures.append(asyncio.get_running_loop().create_task(get_iac_run(client, scan_details['projectId'], scan_id, PLATFORM_NAME, versions, __org, __info_uri)))
-
-    if not opts.SkipApi and 'apisec' in engines:
-      pass
 
     if not opts.SkipContainers and 'containers' in engines:
       pass

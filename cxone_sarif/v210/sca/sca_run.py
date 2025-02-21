@@ -1,7 +1,7 @@
 from cxone_sarif.run_factory import RunFactory
 from cxone_api import CxOneClient
 from cxone_api.util import json_on_ok
-from ...moveto.cxone_api.high.sca import get_sca_report, ScaReportOptions, ScaReportType
+from cxone_api.high.sca import get_sca_report, ScaReportOptions, ScaReportType
 from typing import Dict, List, Tuple
 from pathlib import Path
 import urllib
