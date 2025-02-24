@@ -27,14 +27,14 @@ jobs:
 
       - name: Build package
         run: |
-          echo "__version__='${{ inputs.version }}'" > cxone_api/__version__.py
+          echo "__version__='${{ inputs.version }}'" > cxone_sarif/__version__.py
           pip3 install build
           python3 -m build
 
       - name: Make release text
         if: ${{ ! inputs.buildonly }} 
         run: |
-          echo "# Checkmarx One Async API ${{ inputs.version }}" > release.md
+          echo "# Checkmarx One Sarif API ${{ inputs.version }}" > release.md
           echo 'Installation can be performed by adding one of the following lines to your `requirements.txt` file:' >> release.md
           WHEEL_NAME=$(basename $(ls dist/*.whl))
           WHEEL_HASH=$(pip3 hash dist/$WHEEL_NAME | grep "^--")
