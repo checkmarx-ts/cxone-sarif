@@ -94,11 +94,14 @@ async def get_sarif_v210_log_for_scan(client : CxOneClient, opts : ReportOpts, s
     if not opts.SkipContainers and 'containers' in engines:
       futures.append(asyncio.get_running_loop().create_task(get_containers_run(client, scan_details['projectId'], scan_id, PLATFORM_NAME, versions, __org, __info_uri)))
 
-    completed, _ = await asyncio.wait(futures)
+    if len(futures) > 0:
+      completed, _ = await asyncio.wait(futures)
+      results = [x.result() for x in completed]
+    else:
+      _log.warning(f"No log types selected or scan {scan_id} did not execute with selected engine types.")  
+      results = []
 
     _log.info("SARIF log complete")
-
-    results = [x.result() for x in completed]
 
     vc_details = version_control_details_factory(scan_details)
 
