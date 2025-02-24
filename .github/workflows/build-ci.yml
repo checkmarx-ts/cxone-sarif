@@ -1,0 +1,23 @@
+name: CI Build Steps [called]
+on:
+  workflow_call:
+    secrets:
+      TEST_TENANT_ID:
+        required: true
+      TEST_REGION:
+        required: true
+      TEST_OAUTH_CLIENT_SECRET:
+        required: true
+      TEST_OAUTH_CLIENT_ID:
+        required: true
+      TEST_API_KEY:
+        required: true
+  push:
+    branches:
+      - "*"
+
+jobs:
+  call-package-build:
+    uses: ./.github/workflows/build.yml
+    with:
+      buildonly: true
