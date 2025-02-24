@@ -11,3 +11,6 @@ class ReportOpts:
   SkipSca : bool
   SkipKics : bool
   SkipContainers : bool
+
+
+DEFAULT = ReportOpts(SastOpts=SastOpts(SkipSast=False, OmitApiResults=False), SkipSca=False, SkipKics=False, SkipContainers=False)

@@ -21,7 +21,7 @@ async def main():
                    [--level LOGLEVEL] [--log-file LOGFILE] [--timeout TIMEOUT] [--retries RETRIES] [--proxy IP:PORT] 
                    [--outdir OUTDIR] [--no-sast] [--no-sast-apisec] [--no-sca] [--no-kics] [--no-containers] [-qk] [-t THREADS] SCANIDS... 
 
-  SCANIDS...          One or more scan ids that will each generate a file containing a SARIF log.
+  SCANIDS...          One or more space-separated scan ids that will each generate a file containing a SARIF log.
 
   -h --help           Show this help.
 
