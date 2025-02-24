@@ -28,37 +28,10 @@ class ScaRun(RunFactory):
     return "03040f8e-d672-4932-9429-c47cb8902357"
 
 
-  @staticmethod
-  def __make_full_description(cve_id : str, description : str, references : List[str]) -> MultiformatMessageString:
-
-    return MultiformatMessageString(
-      properties = { "references" : references },
-      text = f"{cve_id}\n{description}\n\n{"\n".join(references)}",
-      markdown = f"# {cve_id}\n## Description\n{description}\n## References\n{"\n".join([f"* [{x}]({x})" for x in references])}"
-    )
-
-  @staticmethod
-  def __make_help_url(client : CxOneClient, cve_id : str) -> str:
-    # CVEs can be found in the NVD.
-
-    # Some vulnerabilities have internal advisory numbers which can be found
-    # in the appsec KB.  This data requires authentication to view.
-
-    __sca_help_base = f"{client.api_endpoint.rstrip("/")}/sca/#/appsec-knowledge-center/vulnerability/riskId/"
-    __nvd_help_base = "https://nvd.nist.gov/vuln/detail/"
-    __cve_prefix = "cve"
-
-    if cve_id is None:
-      return None
-
-    if len(cve_id) > len(__cve_prefix) and cve_id.lower().startswith(__cve_prefix):
-      return __nvd_help_base + cve_id
-    else:
-      return __sca_help_base + cve_id
 
 
   @staticmethod
-  def __get_vulnerabilies(client : CxOneClient, vulnerabilities : List[Dict], location_index : Dict[str, List[str]], project_id : str, scan_id : str) -> Tuple[List[Result], Dict[str, str]]:
+  def __get_vulnerabilities(client : CxOneClient, vulnerabilities : List[Dict], location_index : Dict[str, List[str]], project_id : str, scan_id : str) -> Tuple[List[Result], Dict[str, str]]:
 
     results = []
     rules = {}
@@ -66,16 +39,16 @@ class ScaRun(RunFactory):
     for vuln in vulnerabilities:
       cve_id = ScaRun.get_value_safe("Id", vuln)
       package_id = ScaRun.get_value_safe("PackageId", vuln)
-      vuln_id = f"{cve_id}"
+      vuln_id = cve_id
 
       if vuln_id not in rules.keys():
         rules[vuln_id] = ReportingDescriptor(
           id = vuln_id,
           name = ScaRun.make_pascal_case_identifier(f"Advisory {cve_id}"),
-          help_uri = ScaRun.__make_help_url(client, cve_id),
+          help_uri = ScaRun.make_cve_help_url(client, cve_id),
           help = MultiformatMessageString(text="See published description."),
           short_description = MultiformatMessageString(text=cve_id),
-          full_description = ScaRun.__make_full_description(cve_id, ScaRun.get_value_safe("Description", vuln), ScaRun.get_value_safe("References", vuln)),
+          full_description = ScaRun.make_cve_description(cve_id, ScaRun.get_value_safe("Description", vuln), ScaRun.get_value_safe("References", vuln)),
           properties = {
             "cvss2" : ScaRun.get_value_safe("Cvss2", vuln),
             "cvss3" : ScaRun.get_value_safe("Cvss3", vuln),
@@ -124,12 +97,12 @@ class ScaRun(RunFactory):
         message = Message(text=ScaRun.get_value_safe("Description", vuln)),
         rule_id = vuln_id,
         locations = locations,
-        hosted_viewer_uri = str(Path(client.display_endpoint) / Path(f"results/{project_id}/{scan_id}/sca?internalPath=" + 
+        hosted_viewer_uri = client.display_endpoint.rstrip("/") + "/" + str(Path(f"results/{project_id}/{scan_id}/sca?internalPath=" + 
           f"{urllib.parse.quote_plus(f"/vulnerabilities/{urllib.parse.quote_plus(f"{cve_id}:{package_id}")}")}" + 
           "/vulnerabilityDetailsGql")),
         partial_fingerprints={
-          "PackageId" : package_id,
-          "CVE" : cve_id
+          "packageId" : package_id,
+          "cve" : cve_id
         },
         properties = {
           "severity" : ScaRun.get_value_safe("Severity", vuln),
@@ -158,7 +131,7 @@ class ScaRun(RunFactory):
     for package in packages:
       package_loc_index[ScaRun.get_value_safe("Id", package)] = ScaRun.get_value_safe("Locations", package)
 
-    results, rules = ScaRun.__get_vulnerabilies(client, ScaRun.get_value_safe("Vulnerabilities", scan_report), package_loc_index, project_id, scan_id)
+    results, rules = ScaRun.__get_vulnerabilities(client, ScaRun.get_value_safe("Vulnerabilities", scan_report), package_loc_index, project_id, scan_id)
 
     driver = ToolComponent(name="SCA", guid=ScaRun.get_tool_guid(),
                            product_suite=platform,

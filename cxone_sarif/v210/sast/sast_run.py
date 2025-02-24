@@ -150,7 +150,9 @@ class SastRun(RunFactory):
   async def __make_apisec_index(client : CxOneClient, scan_id : str) -> Dict[str, Dict[str, ApiSecResult]]:
     index = {}
 
-    async for risk in page_generator(retrieve_apisec_security_risks, "entries", "page", 1, client=client, scan_id=scan_id):
+    async for risk in page_generator(retrieve_apisec_security_risks, array_element="entries", 
+                                     offset_param="page", offset_init_value=1, 
+                                     offset_is_by_count=False, client=client, scan_id=scan_id):
       key = SastRun.get_value_safe("sast_risk_id", risk)
       method = SastRun.get_value_safe("http_method", risk)
 

@@ -1,4 +1,4 @@
-from .v210 import get_sast_run, get_sca_run, get_iac_run
+from .v210 import get_sast_run, get_sca_run, get_iac_run, get_containers_run
 from cxone_api import CxOneClient
 from cxone_api.exceptions import ResponseException
 from cxone_sarif.opts import ReportOpts
@@ -9,9 +9,18 @@ from cxone_api.high.util import CxOneVersions
 from cxone_api.util import json_on_ok
 from cxone_api.low.scans import retrieve_scan_details
 from jsonpath_ng import parse
-from typing import Dict
+from typing import Dict, List, Any
 import logging, asyncio
 
+class RunFailures(Exception):
+
+  def __init__(self, non_runs : List[Any], *args):
+    super().__init__(args)
+    self.__non_runs = non_runs
+
+  @property
+  def non_runs(self) -> List[Any]:
+    return self.__non_runs
 
 PLATFORM_NAME="CheckmarxOne"
 
@@ -20,13 +29,15 @@ PLATFORM_NAME="CheckmarxOne"
 
   Args:
     client - A CxOneClient class instance from the cxone-async-api
+    opts - Report generation options
     scan_id - A GUID string representing a scan id in CheckmarxOne
+    throw_on_run_failure - Set to true to throw RunFailures if any run generations fail.  Default: False
 
   Returns:
     A SarifLog element containing scan results for any engines executed during the scan.
 
 """
-async def get_sarif_v210_log_for_scan(client : CxOneClient, opts : ReportOpts, scan_id : str) -> SarifLog:
+async def get_sarif_v210_log_for_scan(client : CxOneClient, opts : ReportOpts, scan_id : str, throw_on_run_failure=False) -> SarifLog:
 
   def version_control_details_factory(scan_details : Dict) -> VersionControlDetails:
     __handler_type = parse("$.metadata.type")
@@ -81,8 +92,7 @@ async def get_sarif_v210_log_for_scan(client : CxOneClient, opts : ReportOpts, s
       futures.append(asyncio.get_running_loop().create_task(get_iac_run(client, scan_details['projectId'], scan_id, PLATFORM_NAME, versions, __org, __info_uri)))
 
     if not opts.SkipContainers and 'containers' in engines:
-      pass
-
+      futures.append(asyncio.get_running_loop().create_task(get_containers_run(client, scan_details['projectId'], scan_id, PLATFORM_NAME, versions, __org, __info_uri)))
 
     completed, _ = await asyncio.wait(futures)
 
@@ -98,7 +108,11 @@ async def get_sarif_v210_log_for_scan(client : CxOneClient, opts : ReportOpts, s
     non_runs = [x for x in results if not isinstance(x, Run)]
 
     if len(non_runs) > 0:
-      _log.warning(f"Some engine runs for scan {scan_id} did not produce a Run log entry.")
+      msg = f"Some engine runs for scan {scan_id} did not produce a Run log entry."
+      if throw_on_run_failure:
+        raise RunFailures(non_runs, msg)
+      else:
+        _log.warning(msg)
 
       counter = 1
       for nr in non_runs:
