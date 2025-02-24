@@ -5,7 +5,7 @@ from docopt import docopt
 from docopt import DocoptExit
 from typing import Dict
 import cxone_api as cx
-from cxone_sarif_logging import bootstrap
+from cxone_sarif.logging import bootstrap
 from cxone_sarif import get_sarif_v210_log_for_scan
 from cxone_sarif.opts import ReportOpts, SastOpts
 from cxone_sarif.__agent__ import __agent__
