@@ -49,7 +49,7 @@ async def main():
 
   -k                  Ignore SSL verification failures. 
 
-  --proxy IP:PORT     A SOCKS5 proxy server to use for communication.
+  --proxy IP:PORT     A proxy server to use for communication.
 
   
   SARIF Log Generation Options:
