@@ -66,7 +66,7 @@ class ScaRun(RunFactory):
     for vuln in vulnerabilities:
       cve_id = ScaRun.get_value_safe("Id", vuln)
       package_id = ScaRun.get_value_safe("PackageId", vuln)
-      vuln_id = f"{cve_id}.{package_id}"
+      vuln_id = f"{cve_id}"
 
       if vuln_id not in rules.keys():
         rules[vuln_id] = ReportingDescriptor(

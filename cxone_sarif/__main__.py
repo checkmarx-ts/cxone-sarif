@@ -54,7 +54,7 @@ async def main():
   
   SARIF Log Generation Options:
   --no-sast           Suppress static code analysis scan results.
-  --no-sast-apisec         Do not augment SAST results with API security scan results.
+  --no-sast-apisec    Do not augment SAST results with API security scan results.
 
   --no-sca            Suppress software composition analysis scan results.
   
