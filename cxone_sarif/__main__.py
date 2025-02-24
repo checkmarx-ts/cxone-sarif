@@ -3,6 +3,7 @@ from asyncio import Semaphore
 from pathlib import Path
 from docopt import docopt
 from docopt import DocoptExit
+from typing import Dict
 import cxone_api as cx
 from cxone_sarif_logging import bootstrap
 from cxone_sarif import get_sarif_v210_log_for_scan
@@ -15,7 +16,8 @@ from jschema_to_python.to_json import to_json
 DEFAULT_LOGLEVEL="INFO"
 
 async def main():
-  """Usage: cxone-sarif --tenant TENANT (--region=REGION | (--url=URL --iam-url=IAMURL)) (--api-key APIKEY | (--client OCLIENT --secret OSECRET)) 
+  """Usage: cxone-sarif --tenant TENANT (--region REGION | (--url URL --iam-url IAMURL)) 
+                   (--api-key APIKEY | (--client OCLIENT --secret OSECRET) | --use-env-oauth | --use-env-api-key) 
                    [--level LOGLEVEL] [--log-file LOGFILE] [--timeout TIMEOUT] [--retries RETRIES] [--proxy IP:PORT] 
                    [--outdir OUTDIR] [--no-sast] [--no-sast-apisec] [--no-sca] [--no-kics] [--no-containers] [-qk] [-t THREADS] SCANIDS... 
 
@@ -36,9 +38,11 @@ async def main():
   Authorization Options:
 
   --api-key APIKEY    The API key to be used for authentication.
+  --use-env-api-key   Retrieve the API key from the environment variable CX_APIKEY.
 
   --client OCLIENT    The name of the OAuth client to be used for authentication.
   --secret OSECRET    The OAuth secret associated with the OAuth client.
+  --use-env-oauth     Retrieve the OAuth credentials from the environment variables CX_OCLIENT and CX_OSECRET.
 
   -- Additional Options --
 
@@ -110,12 +114,7 @@ async def main():
       proxy = None
 
 
-    if args['--api-key'] is not None:
-      client = cx.CxOneClient.create_with_api_key(args['--api-key'], f"{__agent__}/{__version__}", auth_endpoint,
-                                                  api_endpoint, int(args['--timeout']), int(args['--retries']), proxy)
-    else:
-      client = cx.CxOneClient.create_with_oauth(args['--client'], args['--secret'], f"{__agent__}/{__version__}", auth_endpoint,
-                                                api_endpoint, int(args['--timeout']), int(args['--retries']), proxy, not (args['-k']))
+    client = cxone_client_factory(args, auth_endpoint, api_endpoint, proxy)
 
     concurrency = Semaphore(max(1, min(int(args['-t']), 8)))
 
@@ -165,6 +164,32 @@ async def execute_on_scanid(client : cx.CxOneClient,
       log.exception(ex)
 
 
+def cxone_client_factory(args : Dict, auth_endpoint : cx.CxOneAuthEndpoint, api_endpoint : cx.CxOneApiEndpoint, proxy : Dict) -> cx.CxOneClient:
+    if args['--api-key'] is not None or args['--use-env-api-key']:
+
+      if args['--api-key'] is not None:
+        key = args['--api-key']
+      elif 'CX_APIKEY' in os.environ.keys():
+        key = os.environ['CX_APIKEY']
+      else:
+        raise Exception("Environment variable CX_APIKEY is not defined.")
+
+      return cx.CxOneClient.create_with_api_key(key, f"{__agent__}/{__version__}", auth_endpoint,
+                                                  api_endpoint, int(args['--timeout']), int(args['--retries']), proxy, not (args['-k']))
+
+    elif (args['--client'] is not None and args['--secret'] is not None) or args['--use-env-oauth']:
+
+      if args['--client'] is not None and args['--secret'] is not None:
+        client = args['--client']
+        secret = args['--secret']
+      elif 'CX_OCLIENT' in os.environ.keys() and 'CX_OSECRET' in os.environ.keys():
+        client = os.environ['CX_OCLIENT']
+        secret = os.environ['CX_OSECRET']
+      else:
+        raise Exception("One or both environment variables CX_OCLIENT and CX_OSECRET are not defined.")
+
+      return cx.CxOneClient.create_with_oauth(client, secret, f"{__agent__}/{__version__}", auth_endpoint,
+                                                api_endpoint, int(args['--timeout']), int(args['--retries']), proxy, not (args['-k']))
 
 if __name__ == "__main__":
   asyncio.run(main())
