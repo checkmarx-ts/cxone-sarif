@@ -34,11 +34,19 @@ jobs:
       - name: Make release text
         if: ${{ ! inputs.buildonly }} 
         run: |
-          echo "# Checkmarx One Sarif API ${{ inputs.version }}" > release.md
-          echo 'Installation can be performed by adding one of the following lines to your `requirements.txt` file:' >> release.md
           WHEEL_NAME=$(basename $(ls dist/*.whl))
           WHEEL_HASH=$(pip3 hash dist/$WHEEL_NAME | grep "^--")
           RELEASE_URL="https://github.com/${{ github.repository }}/releases/download/${{ inputs.version }}/$WHEEL_NAME"
+
+          echo "# Checkmarx One Sarif API and CLI ${{ inputs.version }}" > release.md
+
+          echo 'Installation can be performed by executing the following in a command shell:' >> release.md
+
+          echo '```' >> release.md
+          echo pip install $RELEASE_URL >> release.md
+          echo '```' >> release.md
+
+          echo 'The API can be referenced in your Python project by adding one of the following lines to your `requirements.txt` file:' >> release.md
 
           echo '```' >> release.md
           echo $RELEASE_URL >> release.md
