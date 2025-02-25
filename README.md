@@ -58,6 +58,8 @@ Usage: cxone-sarif [-h | --help] --tenant TENANT (--region REGION | (--url URL -
 
   -h --help           Show this help.
 
+  -v --version        Show version and exit.
+
   --tenant TENANT     The name of the tenant for use with the specified CheckmarxOne service endpoint.
                 
   Multi-Tenant CheckmarxOne options:
