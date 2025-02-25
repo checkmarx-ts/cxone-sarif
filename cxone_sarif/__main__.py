@@ -1,4 +1,4 @@
-import asyncio, os, logging, aiofiles
+import asyncio, os, logging, aiofiles, sys
 from asyncio import Semaphore
 from pathlib import Path
 from docopt import docopt
@@ -16,7 +16,7 @@ from jschema_to_python.to_json import to_json
 DEFAULT_LOGLEVEL="INFO"
 
 async def main():
-  """Usage: cxone-sarif --tenant TENANT (--region REGION | (--url URL --iam-url IAMURL)) 
+  """Usage: cxone-sarif [-h | --help] --tenant TENANT (--region REGION | (--url URL --iam-url IAMURL)) 
                    (--api-key APIKEY | (--client OCLIENT --secret OSECRET) | --use-env-oauth | --use-env-api-key) 
                    [--level LOGLEVEL] [--log-file LOGFILE] [--timeout TIMEOUT] [--retries RETRIES] [--proxy IP:PORT] 
                    [--outdir OUTDIR] [--no-sast] [--no-sast-apisec] [--no-sca] [--no-kics] [--no-containers] [-qk] [-t THREADS] SCANIDS... 
@@ -121,7 +121,7 @@ async def main():
     if len(args['SCANIDS']) > len(set(args['SCANIDS'])):
       _log.warning("Some scan ids that were defined multiple times, only one log will be produced per unique scan id.")
 
-    await asyncio.wait([asyncio.get_running_loop()
+    task_result, _ = await asyncio.wait([asyncio.get_running_loop()
                          .create_task(execute_on_scanid(client, 
                                                         scanid, 
                                                         args['--outdir'],
@@ -132,7 +132,8 @@ async def main():
                                                           SkipContainers=args['--no-containers'],
                                                         ),
                                                         concurrency)) for scanid in set(args['SCANIDS'])])
-    
+  
+    exit(max([x.result() for x in task_result]))
   except DocoptExit as bad_args:
     print("Incorrect arguments provided.")
     print(bad_args)
@@ -155,13 +156,17 @@ async def execute_on_scanid(client : cx.CxOneClient,
     log = logging.getLogger(f"execute_on_scanid:{scan_id}")
     try:
 
-      sarif_log = await get_sarif_v210_log_for_scan(client, opts, scan_id)
+      sarif_log = await get_sarif_v210_log_for_scan(client, opts, scan_id, True)
       
       async with aiofiles.open(Path(outdir) / f"{scan_id}.sarif", "wt") as fp:
         await fp.write(to_json(sarif_log))
         await fp.flush()
-    except Exception as ex:
+      
+      return 0
+    except BaseException as ex:
       log.exception(ex)
+      print(scan_id, file=sys.stderr)
+      return 100
 
 
 def cxone_client_factory(args : Dict, auth_endpoint : cx.CxOneAuthEndpoint, api_endpoint : cx.CxOneApiEndpoint, proxy : Dict) -> cx.CxOneClient:
@@ -192,4 +197,7 @@ def cxone_client_factory(args : Dict, auth_endpoint : cx.CxOneAuthEndpoint, api_
                                                 api_endpoint, int(args['--timeout']), int(args['--retries']), proxy, not (args['-k']))
 
 if __name__ == "__main__":
+  asyncio.run(main())
+
+def cli_entry():
   asyncio.run(main())

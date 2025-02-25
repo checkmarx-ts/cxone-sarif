@@ -142,10 +142,14 @@ async def get_sarif_v210_log_for_scan(client : CxOneClient, opts : ReportOpts, s
   except ResponseException as rex:
     runs = None
     _log.warning(f"No Run log entries created for scan {scan_id} due to error.")
-    _log.exception(ex)
+    _log.exception(rex)
+    if throw_on_run_failure:
+      raise rex
   except Exception as ex:
     # 3.13.4 - runs is null if there is an error finding the results.
     runs = None
     _log.warning(f"No Run log entries created for scan {scan_id} due to error.")
     _log.exception(ex)
+    if throw_on_run_failure:
+      raise ex
 

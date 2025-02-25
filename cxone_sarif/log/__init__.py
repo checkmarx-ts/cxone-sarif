@@ -16,7 +16,7 @@ def bootstrap(log_level : str, use_console : bool = True, dest_file : str = None
   if dest_file is not None:
     selected_handlers.append("file")
     handlers_dict["file"] = {
-              "class": "logging.RotatingFileHandler",
+              "class": "logging.handlers.RotatingFileHandler",
               "formatter": "default",
               "filename": dest_file,
               "backupCount" : 10,
