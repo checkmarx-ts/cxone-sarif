@@ -21,7 +21,7 @@ the SARIF logs output by the CheckmarxOne CLI.
 The module can be installed manually the URL for the install `.whl` file from the Releases:
 
 ```Bash
-pip install https://github.com/checkmarx-ts/cxone-sarif/releases/download/1.0.3/cxone_sarif-X.X.X-py3-none-any.whl
+pip install https://github.com/checkmarx-ts/cxone-sarif/releases/download/X.X.X/cxone_sarif-X.X.X-py3-none-any.whl
 ```
 
 ## Using the API
@@ -125,7 +125,7 @@ cxone-sarif \
 ```
 
 Upon completion, the files `10253e85-2d70-450e-bc5d-9e54dc5f10c5.sarif` and `97068a6d-f2fa-4047-bea1-bd74df3a4059.sarif` are written
-in `./` (the default output path), each containing a SARIF log with a run for each scan engine executed for the scan.
+in `./` (the default output path), each containing a SARIF log with a `Run` for each scan engine executed for the scan.
 
 ### Handling Errors with the CLI
 
@@ -139,4 +139,14 @@ The CLI emits shell exit codes on completion:
 
 When a SARIF log fails, the details are emitted in the log.  The scan id for each
 failed log is emitted on `stderr` and can be captured by piping `stderr` output
-to capture the failed scan ids.
+to a file.
+
+An example where the failed scan ids are written to `failures.txt`:
+
+```Bash
+cxone-sarif \
+  --tenant {your tenant name} \
+  --region {your region} \
+  --use-env-oauth \
+  10253e85-2d70-450e-bc5d-9e54dc5f10c5 97068a6d-f2fa-4047-bea1-bd74df3a4059 2> failures.txt
+```
