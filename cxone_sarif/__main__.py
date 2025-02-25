@@ -16,7 +16,7 @@ from jschema_to_python.to_json import to_json
 DEFAULT_LOGLEVEL="INFO"
 
 async def main():
-  """Usage: cxone-sarif [-h | --help] --tenant TENANT (--region REGION | (--url URL --iam-url IAMURL)) 
+  """Usage: cxone-sarif [-h | --help | -v | --version] --tenant TENANT (--region REGION | (--url URL --iam-url IAMURL)) 
                    (--api-key APIKEY | (--client OCLIENT --secret OSECRET) | --use-env-oauth | --use-env-api-key) 
                    [--level LOGLEVEL] [--log-file LOGFILE] [--timeout TIMEOUT] [--retries RETRIES] [--proxy IP:PORT] 
                    [--outdir OUTDIR] [--no-sast] [--no-sast-apisec] [--no-sca] [--no-kics] [--no-containers] [-qk] [-t THREADS] SCANIDS... 
@@ -24,6 +24,8 @@ async def main():
   SCANIDS...          One or more space-separated scan ids that will each generate a file containing a SARIF log.
 
   -h --help           Show this help.
+
+  -v --version        Show version and exit.
 
   --tenant TENANT     The name of the tenant for use with the specified CheckmarxOne service endpoint.
                 
@@ -83,7 +85,7 @@ async def main():
   """
 
   try:
-    args = docopt(main.__doc__.replace("{CXREGIONS}", ",".join(cx.ApiRegionEndpoints.keys())), version=__version__)
+    args = docopt(main.__doc__.replace("{CXREGIONS}", ",".join(cx.ApiRegionEndpoints.keys())), version=f"cxone-sarif {__version__}")
 
     bootstrap(DEFAULT_LOGLEVEL if args['--level'] is None else args['--level'], 
               not args['-q'], args['--log-file'])
