@@ -42,7 +42,7 @@ class IaCRun(RunFactory):
           id = vuln_id,
           name = IaCRun.make_pascal_case_identifier(query_name),
           help_uri = "https://docs.kics.io/latest/queries/all-queries/",
-          help = MultiformatMessageString(text=f"Use help URL to search for Query ID {IaCRun.get_value_safe("queryID", result)}"),
+          help = MultiformatMessageString(text=f"Use help URL to search for Query ID {IaCRun.get_value_safe('queryID', result)}"),
           short_description = MultiformatMessageString(text=IaCRun.get_value_safe("type", result)),
           full_description = MultiformatMessageString(text=IaCRun.get_value_safe("description", result)),
         )
@@ -61,7 +61,7 @@ class IaCRun(RunFactory):
         message = Message(text=IaCRun.get_value_safe("actualValue", result)),
         rule_id = vuln_id,
         locations = [location],
-        hosted_viewer_uri = f"{client.display_endpoint.rstrip("/")}/{str(Path("results") / Path(scan_id) / Path (project_id))}/kics?result-id=" +
+        hosted_viewer_uri = f"{client.display_endpoint.rstrip('/')}/{str(Path('results') / Path(scan_id) / Path (project_id))}/kics?result-id=" +
           urllib.parse.quote_plus(IaCRun.get_value_safe("ID", result)),
         partial_fingerprints={
           "similarityID" : IaCRun.get_value_safe("similarityID", result),

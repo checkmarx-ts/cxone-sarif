@@ -89,17 +89,19 @@ class ScaRun(RunFactory):
             Location(
               physical_location=PhysicalLocation(
                 artifact_location=ArtifactLocation(
-                  uri=f"file:/{artifact_loc.lstrip("/")}"),
+                  uri=f"file:/{artifact_loc.lstrip('/')}"),
                 region=Region(start_line=1)
               )))
+
+
+      vuln_path = urllib.parse.quote_plus(f"/vulnerabilities/{urllib.parse.quote_plus(f'{cve_id}:{package_id}')}")
 
       results.append(Result(
         message = Message(text=ScaRun.get_value_safe("Description", vuln)),
         rule_id = vuln_id,
         locations = locations,
         hosted_viewer_uri = client.display_endpoint.rstrip("/") + "/" + str(Path(f"results/{project_id}/{scan_id}/sca?internalPath=" + 
-          f"{urllib.parse.quote_plus(f"/vulnerabilities/{urllib.parse.quote_plus(f"{cve_id}:{package_id}")}")}" + 
-          "/vulnerabilityDetailsGql")),
+          f"{vuln_path}/vulnerabilityDetailsGql")),
         partial_fingerprints={
           "packageId" : package_id,
           "cve" : cve_id

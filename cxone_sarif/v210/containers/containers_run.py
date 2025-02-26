@@ -40,8 +40,8 @@ class ContainersRun(RunFactory):
       cve_id = ContainersRun.get_value_safe("id", result)
       vuln_id = cve_id
       vuln_data = ContainersRun.get_value_safe("data", result)
-      image_spec = f"{ContainersRun.get_value_safe("imageName", vuln_data)}:{ContainersRun.get_value_safe("imageTag", vuln_data)}"
-      package_spec = f"{ContainersRun.get_value_safe("packageName", vuln_data)}:{ContainersRun.get_value_safe("packageVersion", vuln_data)}"
+      image_spec = f"{ContainersRun.get_value_safe('imageName', vuln_data)}:{ContainersRun.get_value_safe('imageTag', vuln_data)}"
+      package_spec = f"{ContainersRun.get_value_safe('packageName', vuln_data)}:{ContainersRun.get_value_safe('packageVersion', vuln_data)}"
       package_id = f"{image_spec}/{package_spec}"
         
 
@@ -68,7 +68,7 @@ class ContainersRun(RunFactory):
           Location(
             physical_location=PhysicalLocation(
               artifact_location=ArtifactLocation(
-                uri=f"file:/{ContainersRun.get_value_safe("imageFilePath", vuln_data).lstrip("/")}"),
+                uri=f"file:/{ContainersRun.get_value_safe('imageFilePath', vuln_data).lstrip('/')}"),
               region=Region(start_line=1)
             ))
         ],

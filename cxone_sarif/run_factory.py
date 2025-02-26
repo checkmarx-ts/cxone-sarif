@@ -46,7 +46,7 @@ class RunFactory:
 
     if references is not None:
       text_references = "\n".join(references)
-      markdown_references = f"## References\n{"\n".join([f"* [{x}]({x})" for x in references])}"
+      markdown_references = f"## References\n{'\n'.join([f'* [{x}]({x})' for x in references])}"
     else:
       text_references = ""
       markdown_references = ""
@@ -64,7 +64,7 @@ class RunFactory:
     # Some vulnerabilities have internal advisory numbers which can be found
     # in the Checkmarx appsec KB.  This data requires authentication to view.
 
-    __sca_help_base = f"{client.api_endpoint.rstrip("/")}/sca/#/appsec-knowledge-center/vulnerability/riskId/"
+    __sca_help_base = f"{client.api_endpoint.rstrip('/')}/sca/#/appsec-knowledge-center/vulnerability/riskId/"
     __nvd_help_base = "https://nvd.nist.gov/vuln/detail/"
     __cve_prefix = "cve"
 

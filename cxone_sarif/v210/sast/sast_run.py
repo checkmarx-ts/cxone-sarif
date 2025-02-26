@@ -229,7 +229,7 @@ class SastRun(RunFactory):
               id=index, 
               physical_location=PhysicalLocation(
                 artifact_location=ArtifactLocation(
-                  uri=f"file:{SastRun.get_value_safe("fileName", node)}"
+                  uri=f"file:{SastRun.get_value_safe('fileName', node)}"
                 ),
               region=Region(
                 start_line=SastRun.get_value_safe("line", node),
@@ -271,7 +271,7 @@ class SastRun(RunFactory):
         message = SastRun.__make_description(query_desc['resultDescription'], nodes[0], nodes[-1:][0], api_sec_props),
         rule_id = rule_id_key,
         locations=locations,
-        hosted_viewer_uri=f"{client.display_endpoint.rstrip("/")}/" + str(Path(f"sast-results/{project_id}/{scan_id}?resultId={urllib.parse.quote_plus(result['pathSystemID'])}")),
+        hosted_viewer_uri=f"{client.display_endpoint.rstrip('/')}/" + str(Path(f'sast-results/{project_id}/{scan_id}?resultId={urllib.parse.quote_plus(result['pathSystemID'])}')),
         partial_fingerprints={
           "similarityID" : str(result['similarityID']),
           "queryKey" : rule_id_key,
