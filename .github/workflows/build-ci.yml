@@ -30,6 +30,10 @@ jobs:
           - "3.12"
           - "3.13"
     container: python:${{ matrix.pver }}
+    env:
+      CXONE_TENANT: ${{ secrets.CXONE_TENANT }}
+      CXONE_CLIENT_ID: ${{ secrets.CXONE_CLIENT_ID }}
+      CXONE_CLIENT_SECRET: ${{ secrets.CXONE_CLIENT_SECRET }}
     steps:
       - name: Fetch Code
         uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b
