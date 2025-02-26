@@ -10,7 +10,7 @@ class RunFactory:
   """
   @staticmethod
   def get_tool_guid() -> str:
-    raise NotImplemented("get_tool_guid")
+    raise NotImplementedError("get_tool_guid")
   
 
   @staticmethod
@@ -46,7 +46,8 @@ class RunFactory:
 
     if references is not None:
       text_references = "\n".join(references)
-      markdown_references = f"## References\n{'\n'.join([f'* [{x}]({x})' for x in references])}"
+      md_refs = '\n'.join([f"* [{x}]({x})" for x in references])
+      markdown_references = f"## References\n{md_refs}"
     else:
       text_references = ""
       markdown_references = ""

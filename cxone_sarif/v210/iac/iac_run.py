@@ -49,12 +49,13 @@ class IaCRun(RunFactory):
 
 
 
-        location = Location(
-              physical_location=PhysicalLocation(
-                artifact_location=ArtifactLocation(
-                  uri=f"file:/{IaCRun.get_value_safe("fileName", result).lstrip("/")}"),
-                region=Region(start_line=IaCRun.get_value_safe("line", result))
-              ))
+      loc_uri = IaCRun.get_value_safe("fileName", result).lstrip("/")
+      location = Location(
+            physical_location=PhysicalLocation(
+              artifact_location=ArtifactLocation(
+                uri=f"file:/{loc_uri}"),
+              region=Region(start_line=IaCRun.get_value_safe("line", result))
+            ))
 
 
       results.append(Result(
