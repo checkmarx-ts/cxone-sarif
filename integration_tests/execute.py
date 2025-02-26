@@ -8,7 +8,7 @@ async def main():
   client = cx.CxOneClient.create_with_oauth(os.environ['CXONE_CLIENT_ID'], os.environ['CXONE_CLIENT_SECRET'], "ghaction", 
     cx.AuthUS(os.environ['CXONE_TENANT']), cx.ApiUS())
   
-  scans = json_on_ok(await retrieve_list_of_scans(client, limit=3))
+  scans = json_on_ok(await retrieve_list_of_scans(client, limit=3, statuses="Completed"))
 
   scan_ids = [x['id'] for x in scans['scans']]
 
