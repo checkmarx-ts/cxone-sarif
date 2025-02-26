@@ -18,10 +18,10 @@ on:
 
 jobs:
 
-  execute-pylint:
+  execute-pylint-and-integration-testing:
     runs-on: ubuntu-latest
     strategy:
-      max-parallel: 3
+      max-parallel: 2
       matrix:
         pver:
           - "3.9"
@@ -41,19 +41,21 @@ jobs:
           virtualenv .venv
           . .venv/bin/activate
           
-          pip install . pylint
-
       - name: Install packages
         shell: bash
         run: |
           pip install . pylint
-  
 
       - name: Pylint
         shell: bash
         run: |
           pylint --disable=all --enable=E,F --disable=E1121 --score=false cxone_sarif
 
+      - name: Integration Test
+        shell: bash
+        run: |
+          python integration_tests/execute.py
+  
 
   call-package-build:
     uses: ./.github/workflows/build.yml
