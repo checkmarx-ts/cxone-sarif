@@ -90,7 +90,7 @@ class ScaRun(RunFactory):
               physical_location=PhysicalLocation(
                 artifact_location=ArtifactLocation(
                   uri=f"file:/{artifact_loc.lstrip('/')}"),
-                region=Region(start_line=1)
+                region=Region(start_line=1, start_column=1, end_line=1, end_column=1)
               )))
 
 
