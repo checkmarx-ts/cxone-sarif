@@ -5,6 +5,10 @@ from cxone_api import CxOneClient
 
 class RunFactory:
 
+  _default_help = MultiformatMessageString(text="Please visit https://docs.checkmarx.com/ for more information.")
+  _default_help_uri = "https://docs.checkmarx.com/"
+
+
   """
   A static GUID for the tool producing the Run entry in the Sarif log.
   """

@@ -40,7 +40,8 @@ class SastRun(RunFactory):
   __metrics_scannedFiles = parse("$.scannedFilesPerLanguage")
   __results_queryIDs = parse("$.results[*].queryID")
 
-  __cache = QueryCache ()
+  __cache = QueryCache()
+
 
   @staticmethod
   def get_tool_guid() -> str:
@@ -48,16 +49,21 @@ class SastRun(RunFactory):
 
   @staticmethod
   async def __partial_file_descriptor_factory(language : str, count : int) -> ReportingDescriptor:
+    desc = MultiformatMessageString(text="Some files were only partially parsed during the scan.")
+
     return ReportingDescriptor(
       id="SAST-PARTIAL-FILES-LANG",
       name="SastPartialFilesByLanguage",
       guid=str(uuid.uuid4()),
+      help=RunFactory._default_help,
+      help_uri=RunFactory._default_help_uri,
       message_strings={"language" : MultiformatMessageString(text=language),
                        "partiallyGoodFiles" : MultiformatMessageString(text=str(count))},
-      short_description=MultiformatMessageString(text="Some files were only partially parsed during the scan."))
+      short_description=desc, full_description=desc)
 
   @staticmethod
   async def __bad_file_descriptor_factory(language : str, count : int) -> ReportingDescriptor:
+    desc = MultiformatMessageString(text="Some files failed to be parsed.  The contents of the file may not be syntactically valid or is not understood by the parser.")
 
     return ReportingDescriptor(
       id="SAST-BAD-FILES-LANG",
@@ -65,7 +71,7 @@ class SastRun(RunFactory):
       guid=str(uuid.uuid4()),
       message_strings={"language" : MultiformatMessageString(text=language),
                        "badFiles" : MultiformatMessageString(text=str(count))},
-      short_description=MultiformatMessageString(text="Some files failed to be parsed.  The contents of the file may not be syntactically valid or is not understood by the parser."))
+      short_description=desc, full_description=desc)
   
   @staticmethod
   async def __notifications_factory(metrics : Dict) -> List[ReportingDescriptor]:
@@ -175,7 +181,7 @@ class SastRun(RunFactory):
     rules = {}
     results = []
 
-    async for result in page_generator(SastRun.__fetch_results_with_cached_descriptions, "results", client=client, scan_id=scan_id):
+    async for result in page_generator(SastRun.__fetch_results_with_cached_descriptions, "results", client=client, scan_id=scan_id, limit=200):
       group = SastRun.get_value_safe("group", result)
       query_name = SastRun.get_value_safe("queryName", result)
       queryId = int(result['queryID'])
@@ -187,9 +193,10 @@ class SastRun(RunFactory):
         rules[queryId] = ReportingDescriptor(
           id = rule_id_key,
           name=SastRun.make_pascal_case_identifier(query_name),
-          short_description = MultiformatMessageString(text=query_desc['cause']),
-          full_description = MultiformatMessageString(text=query_desc['risk']),
-          help = MultiformatMessageString(text=query_desc['generalRecommendations']),
+          short_description = MultiformatMessageString(text=query_desc['cause'] if query_desc is not None else "Not available."),
+          full_description = MultiformatMessageString(text=query_desc['risk'] if query_desc is not None else "Not available."),
+          help = MultiformatMessageString(text=query_desc['generalRecommendations'] if query_desc is not None else "Not available."),
+          help_uri = SastRun._default_help_uri,
           properties = {
             "queryID" : queryId,
           })
@@ -268,7 +275,8 @@ class SastRun(RunFactory):
         api_sec_props = None
 
       results.append(Result(
-        message = SastRun.__make_description(query_desc['resultDescription'], nodes[0], nodes[-1:][0], api_sec_props),
+        message = SastRun.__make_description(query_desc['resultDescription'] if query_desc is not None else "Not available.", 
+                    nodes[0], nodes[-1:][0], api_sec_props),
         rule_id = rule_id_key,
         locations=locations,
         hosted_viewer_uri=f"{client.display_endpoint.rstrip('/')}/" + str(Path(f"sast-results/{project_id}/{scan_id}?resultId={urllib.parse.quote_plus(result['pathSystemID'])}")),
