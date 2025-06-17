@@ -31,7 +31,7 @@ class ContainersRun(RunFactory):
 
     # This is a bit inefficient, maybe one day containers will have its own result API.
     # This data stream lacks some data required for best results.
-    async for result in page_generator(retrieve_scan_results_all_scanners, array_element="results", offset_is_by_count=False,
+    async for result in page_generator(retrieve_scan_results_all_scanners, array_element="results",
                                        client=client, scan_id=scan_id, limit=100):
 
       if not "containers" == ContainersRun.get_value_safe("type", result):
