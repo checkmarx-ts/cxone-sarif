@@ -12,13 +12,16 @@ from sarif_om import (Run,
                       ArtifactLocation,
                       Region,
                       RunAutomationDetails,
-                      Tool)
+                      Tool,
+                      CodeFlow,
+                      ThreadFlow,
+                      ThreadFlowLocation)
 from cxone_api.low.sast_metadata import retrieve_scan_metadata, retrieve_scan_metrics
 from cxone_api.low.sast_results import retrieve_sast_scan_results
 from cxone_api.low.api import retrieve_apisec_security_risks, retrieve_risk_details
 from cxone_sarif.sast_query_cache import QueryCache
 from cxone_sarif.run_factory import RunFactory
-from cxone_sarif.utils import normalize_file_uri
+from cxone_sarif.utils import normalize_file_uri, SeverityTranslator
 from jsonpath_ng import parse
 import uuid,requests,hashlib,urllib
 from pathlib import Path
@@ -190,23 +193,26 @@ class SastRun(RunFactory):
 
       query_desc = await SastRun.__cache.get(client, queryId)
 
+      # Cache the rule if it hasn't been seen before.
       if queryId not in rules.keys():
         rules[queryId] = ReportingDescriptor(
           id = rule_id_key,
           name=SastRun.make_pascal_case_identifier(query_name),
-          short_description = MultiformatMessageString(text=query_desc['cause'] if query_desc is not None else "Not available."),
+          short_description = 
+            MultiformatMessageString(text=SastRun.make_title(SastRun.get_value_safe("languageName", result), SastRun.get_value_safe("queryName", result))),
           full_description = MultiformatMessageString(text=query_desc['risk'] if query_desc is not None else "Not available."),
           help = MultiformatMessageString(text=query_desc['generalRecommendations'] if query_desc is not None else "Not available."),
           help_uri = SastRun._default_help_uri,
           properties = {
             "queryID" : queryId,
+            "security-severity" : str(SastRun.get_value_safe("cvssScore", result)),
           })
 
       nodes = SastRun.get_value_safe("nodes", result)
-      locations = []
+      threadflow_locations = None
+      cur_loop_loc = None
       filePathsFingerprint = hashlib.sha256()
       if nodes is not None:
-        index = 0
         for node in nodes:
           filePathsFingerprint.update(bytes(SastRun.get_value_safe("fileName", node), "UTF-8"))
 
@@ -232,9 +238,13 @@ class SastRun(RunFactory):
             return column_val + length_val
           
 
-          locations.append(
-            Location(
-              id=index, 
+          # Last node is the sink, this will be reported as the single
+          # location per the Sarif spec.  (Sarif spec says this should
+          # have only one element since SAST results don't report related
+          # locations for each flow.)  After all the loops, sink_loc will be the
+          # sink.
+          cur_loop_loc = Location(
+              id=0, 
               physical_location=PhysicalLocation(
                 artifact_location=ArtifactLocation(
                   uri=normalize_file_uri(SastRun.get_value_safe('fileName', node))
@@ -251,9 +261,16 @@ class SastRun(RunFactory):
                   "nodeID" : SastRun.get_value_safe("nodeID", node),
                   "fullName" : SastRun.get_value_safe("fullName", node)
                 }
-              ))))
-          index += 1
+              )))
+          
+          thread_flow_loc = ThreadFlowLocation(
+            location=cur_loop_loc
+          )
 
+          if threadflow_locations is None:
+            threadflow_locations = [thread_flow_loc]
+          else:
+            threadflow_locations.append(thread_flow_loc)
 
       props = {
           "state" : result['state'],
@@ -279,14 +296,16 @@ class SastRun(RunFactory):
         message = SastRun.__make_description(query_desc['resultDescription'] if query_desc is not None else "Not available.", 
                     nodes[0], nodes[-1:][0], api_sec_props),
         rule_id = rule_id_key,
-        locations=locations,
-        hosted_viewer_uri=f"{client.display_endpoint.rstrip('/')}/" + str(Path(f"sast-results/{project_id}/{scan_id}?resultId={urllib.parse.quote_plus(result['pathSystemID'])}")),
+        locations=[cur_loop_loc] if cur_loop_loc is not None else None,
+        hosted_viewer_uri=f"{client.display_endpoint.rstrip('/')}/" + 
+          str(Path(f"sast-results/{project_id}/{scan_id}?resultId={urllib.parse.quote_plus(result['pathSystemID'])}")),
         partial_fingerprints={
           "similarityID" : str(result['similarityID']),
           "queryKey" : rule_id_key,
           "nodeFilePathsSha256" : filePathsFingerprint.hexdigest(),
         },
-        properties=props
+        properties=props,
+        code_flows=[CodeFlow(thread_flows=[ThreadFlow(locations=threadflow_locations)])] if threadflow_locations is not None else None
       ))
     
 

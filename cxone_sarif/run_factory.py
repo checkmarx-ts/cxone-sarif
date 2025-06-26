@@ -44,6 +44,9 @@ class RunFactory:
   def make_pascal_case_identifier(s : str) -> str:
     return "".join([x.capitalize() for x in RunFactory.__prep_identifier(s).split(" ")])
 
+  @staticmethod
+  def make_title(language : str, query_name : str) -> str:
+    return f"{language.capitalize()}: {query_name.replace("_", " ")}"
 
   @staticmethod
   def make_cve_description(cve_id : str, description : str, references : List[str]) -> MultiformatMessageString:
