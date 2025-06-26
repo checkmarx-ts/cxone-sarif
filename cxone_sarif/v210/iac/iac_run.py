@@ -1,3 +1,4 @@
+from cxone_sarif.utils import normalize_file_uri
 from cxone_sarif.run_factory import RunFactory
 from cxone_api import CxOneClient
 from cxone_api.util import page_generator
@@ -49,13 +50,13 @@ class IaCRun(RunFactory):
 
 
 
-      loc_uri = IaCRun.get_value_safe("fileName", result).lstrip("/")
       location = Location(
             physical_location=PhysicalLocation(
               artifact_location=ArtifactLocation(
-                uri=f"file:/{loc_uri}"),
-              region=Region(start_line=IaCRun.get_value_safe("line", result))
-            ))
+                uri=normalize_file_uri(IaCRun.get_value_safe("fileName", result)),
+                region=Region(start_line=IaCRun.get_value_safe("line", result))
+            )))
+      
 
 
       results.append(Result(

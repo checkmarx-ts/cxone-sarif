@@ -18,6 +18,7 @@ from cxone_api.low.sast_results import retrieve_sast_scan_results
 from cxone_api.low.api import retrieve_apisec_security_risks, retrieve_risk_details
 from cxone_sarif.sast_query_cache import QueryCache
 from cxone_sarif.run_factory import RunFactory
+from cxone_sarif.utils import normalize_file_uri
 from jsonpath_ng import parse
 import uuid,requests,hashlib,urllib
 from pathlib import Path
@@ -236,7 +237,7 @@ class SastRun(RunFactory):
               id=index, 
               physical_location=PhysicalLocation(
                 artifact_location=ArtifactLocation(
-                  uri=f"file:{SastRun.get_value_safe('fileName', node)}"
+                  uri=normalize_file_uri(SastRun.get_value_safe('fileName', node))
                 ),
               region=Region(
                 start_line=SastRun.get_value_safe("line", node),

@@ -1,3 +1,4 @@
+from cxone_sarif.utils import normalize_file_uri
 from cxone_sarif.run_factory import RunFactory
 from cxone_api import CxOneClient
 from cxone_api.util import json_on_ok
@@ -89,8 +90,8 @@ class ScaRun(RunFactory):
             Location(
               physical_location=PhysicalLocation(
                 artifact_location=ArtifactLocation(
-                  uri=f"file:/{artifact_loc.lstrip('/')}"),
-                region=Region(start_line=1, start_column=1, end_line=1, end_column=1)
+                  uri=normalize_file_uri(artifact_loc)),
+                  region=Region(start_line=1, start_column=1, end_line=1, end_column=1)
               )))
 
 

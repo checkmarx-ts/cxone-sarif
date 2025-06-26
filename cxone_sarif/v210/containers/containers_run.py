@@ -1,4 +1,5 @@
 from cxone_sarif.run_factory import RunFactory
+from cxone_sarif.utils import normalize_file_uri
 from cxone_api import CxOneClient
 from cxone_api.util import page_generator
 from cxone_api.low.all_scanners_results import retrieve_scan_results_all_scanners
@@ -68,9 +69,9 @@ class ContainersRun(RunFactory):
           Location(
             physical_location=PhysicalLocation(
               artifact_location=ArtifactLocation(
-                uri=f"file:/{ContainersRun.get_value_safe('imageFilePath', vuln_data).lstrip('/')}"),
-              region=Region(start_line=1)
-            ))
+                uri=normalize_file_uri(ContainersRun.get_value_safe('imageFilePath', vuln_data)),
+                region=Region(start_line=1)
+            )))
         ],
         hosted_viewer_uri = client.display_endpoint.rstrip("/") + f"/container-security-results/{project_id}/{scan_id}/results/" ,
         partial_fingerprints={
