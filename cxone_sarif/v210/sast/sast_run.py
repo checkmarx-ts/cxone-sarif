@@ -99,7 +99,7 @@ class SastRun(RunFactory):
     return response
   
   @staticmethod
-  def __make_description(description : str, source_node : Dict, sink_node : Dict, apisec_results : List[ApiSecResult]) -> Message:
+  def __make_description(description : str, source_node : Dict, sink_node : Dict, apisec_results : List[ApiSecResult], viewer_link : str) -> Message:
     text = markdown = description
 
     def get_or_unknown(node, key):
@@ -129,7 +129,10 @@ class SastRun(RunFactory):
         .replace("@DestinationMethod", f"**{get_or_unknown(sink_node, 'method')}**") \
         .replace("@DestinationLine", f"**{str(get_or_unknown(sink_node, 'line'))}**") \
         .replace("@DestinationElement", f"**{get_or_unknown(sink_node, 'name')}**")
-      
+
+      if viewer_link is not None:
+        markdown += f" [View in CheckmarxOne]({viewer_link})"
+
       if apisec_results is not None:
         text += "\n\nAPI Endpoints:\n"
         markdown += "\n\n**API Endpoints:**\n"
@@ -137,6 +140,7 @@ class SastRun(RunFactory):
         for ares in apisec_results:
           text += f"{ares.http_method} {ares.endpoint_path}\n"
           markdown += f"* {ares.http_method} {ares.endpoint_path}\n"
+      
 
     return Message(text=text, markdown=markdown)
 
@@ -292,13 +296,15 @@ class SastRun(RunFactory):
       else:
         api_sec_props = None
 
+      viewer_link = f"{client.display_endpoint.rstrip('/')}/" + \
+          str(Path(f"sast-results/{project_id}/{scan_id}?resultId={urllib.parse.quote_plus(result['pathSystemID'])}"))
+
       results.append(Result(
         message = SastRun.__make_description(query_desc['resultDescription'] if query_desc is not None else "Not available.", 
-                    nodes[0], nodes[-1:][0], api_sec_props),
+                    nodes[0], nodes[-1:][0], api_sec_props, viewer_link),
         rule_id = rule_id_key,
         locations=[cur_loop_loc] if cur_loop_loc is not None else None,
-        hosted_viewer_uri=f"{client.display_endpoint.rstrip('/')}/" + 
-          str(Path(f"sast-results/{project_id}/{scan_id}?resultId={urllib.parse.quote_plus(result['pathSystemID'])}")),
+        hosted_viewer_uri=viewer_link,
         partial_fingerprints={
           "similarityID" : str(result['similarityID']),
           "queryKey" : rule_id_key,
