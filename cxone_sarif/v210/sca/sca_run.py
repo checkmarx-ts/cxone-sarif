@@ -139,7 +139,7 @@ class ScaRun(RunFactory):
       vuln_path = urllib.parse.quote_plus(f"/vulnerabilities/{urllib.parse.quote_plus(f'{cve_id}:{package_id}')}")
 
       viewer_url = client.display_endpoint.rstrip("/") + "/" + str(Path(f"results/{project_id}/{scan_id}/sca?internalPath=" + \
-          f"{vuln_path}/vulnerabilityDetailsGql"))
+          f"{vuln_path}%2FvulnerabilityDetailsGql"))
 
       results.append(Result(
         message = ScaRun.__make_result_msg(ep_bullets, viewer_url),
