@@ -46,7 +46,8 @@ class RunFactory:
 
   @staticmethod
   def make_title(language : str, query_name : str) -> str:
-    return f"{language.capitalize()}: {query_name.replace("_", " ")}"
+    qname = query_name.replace("_", " ")
+    return f"{language.capitalize()}: {qname}"
 
   @staticmethod
   def make_cve_description(cve_id : str, description : str, references : List[str]) -> MultiformatMessageString:
