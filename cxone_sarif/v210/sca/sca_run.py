@@ -84,7 +84,8 @@ class ScaRun(RunFactory):
 
         ep_index = 0
         for method in exploitable_methods:
-          ep_bullets.append(f"{ScaRun.get_value_safe("FullName", method)}: {ScaRun.get_value_safe('SourceFile', method)} Line: {ScaRun.get_value_safe("Line", method)}")
+          ep_bullets.append("{}: {} Line: {}".format(
+            ScaRun.get_value_safe("FullName", method), ScaRun.get_value_safe('SourceFile', method), ScaRun.get_value_safe("Line", method)))
 
           # Exploitable path doesn't provide enough information to get a nice flow highlight,
           # so like display is all that is shown.  EP also references code that is in the 
