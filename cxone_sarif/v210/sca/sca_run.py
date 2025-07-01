@@ -32,8 +32,9 @@ class ScaRun(RunFactory):
 
 
   @staticmethod
-  def __make_result_msg(ep_bullets : List[str], viewer_link : str) -> Message:
-    desc = "Package manifest where references can be found is shown."
+  def __make_result_msg(ep_bullets : List[str], viewer_link : str, package_manager : str, package_name : str, package_version : str) -> Message:
+    desc = f"Displaying manifest where package reference is found. Detected in package **{package_name}** " + \
+      f"version **{package_version}** from package manager **{package_manager}**."
 
     if len(ep_bullets) > 0:
       desc += "\n\n"
@@ -142,7 +143,10 @@ class ScaRun(RunFactory):
           f"{vuln_path}%2FvulnerabilityDetailsGql"))
 
       results.append(Result(
-        message = ScaRun.__make_result_msg(ep_bullets, viewer_url),
+        message = ScaRun.__make_result_msg(ep_bullets, viewer_url, 
+                                           ScaRun.get_value_safe("PackageManager", vuln), 
+                                           ScaRun.get_value_safe("PackageName", vuln),
+                                           ScaRun.get_value_safe("PackageVersion", vuln)),
         rule_id = vuln_id,
         locations = locations,
         hosted_viewer_uri = viewer_url,
