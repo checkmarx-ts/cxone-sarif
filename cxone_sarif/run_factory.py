@@ -53,7 +53,7 @@ class RunFactory:
     return f"{language.capitalize()}: {qname}"
 
   @staticmethod
-  def make_cve_description(cve_id : str, description : str, references : List[str]) -> MultiformatMessageString:
+  def make_cve_description(cve_id : str, description : str, references : List[str], help_url : str = None) -> MultiformatMessageString:
 
     if references is not None:
       text_references = "\n".join(references)
@@ -63,10 +63,12 @@ class RunFactory:
       text_references = ""
       markdown_references = ""
 
+    help = "" if help_url is None else f"\n\n[Details]({help_url})"
+
     return MultiformatMessageString(
       properties = { "references" : references },
       text = f"{cve_id}\n{description}\n\n{text_references}",
-      markdown = f"# {cve_id}\n## Description\n{description}\n{markdown_references}"
+      markdown = f"# {cve_id}\n## Description\n{description}\n{markdown_references}{help}"
     )
 
   @staticmethod
