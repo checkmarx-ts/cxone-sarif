@@ -79,7 +79,7 @@ class ContainersRun(RunFactory):
                                                    ContainersRun.get_value_safe('imageTag', vuln_data))
 
       results.append(Result(
-        message = Message(text=f"See: {viewer_uri}", markdown=f"[View in CheckmarxOne]({viewer_uri})"),
+        message = Message(text=f"Detected in {package_spec}. See: {viewer_uri}", markdown=f"[View in CheckmarxOne]({viewer_uri})"),
         rule_id = vuln_id,
         locations = [
           Location(
