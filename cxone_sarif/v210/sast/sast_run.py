@@ -49,7 +49,7 @@ class SastRun(RunFactory):
 
   @staticmethod
   def get_tool_guid() -> str:
-    return "79cc9d1f-6183-4e37-8656-ef1a16dac7eb"
+    return "1ca3e5a3-f84e-43aa-8b7c-fe39c2cecac4"
 
   @staticmethod
   async def __partial_file_descriptor_factory(language : str, count : int) -> ReportingDescriptor:

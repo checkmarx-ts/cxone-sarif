@@ -28,7 +28,7 @@ class ScaRun(RunFactory):
 
   @staticmethod
   def get_tool_guid() -> str:
-    return "03040f8e-d672-4932-9429-c47cb8902357"
+    return "3535ec30-c264-4cfb-a816-67984dc28151"
 
 
   @staticmethod

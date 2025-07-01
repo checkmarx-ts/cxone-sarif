@@ -25,7 +25,7 @@ class IaCRun(RunFactory):
 
   @staticmethod
   def get_tool_guid() -> str:
-    return "033fb009-5cb2-4301-9ac9-62c295bcf8ff"
+    return "93ae2d79-7445-4da2-943f-c6e17e96de7d"
   
   __kics_query_docs_uri = "https://docs.kics.io/latest/queries/all-queries/"
   
