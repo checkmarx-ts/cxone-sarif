@@ -92,7 +92,7 @@ class ContainersRun(RunFactory):
         }
       ))
 
-    driver = ToolComponent(name="Container Security", guid=ContainersRun.get_tool_guid(),
+    driver = ToolComponent(name="CheckmarxOne-Container Security", guid=ContainersRun.get_tool_guid(),
                            product_suite=platform,
                            full_name=f"Checkmarx Container Security {version}",
                            short_description=MultiformatMessageString(text="Container security analysis scanner."),
@@ -108,7 +108,7 @@ class ContainersRun(RunFactory):
                results=results, 
                automation_details=RunAutomationDetails(
                  description=Message(text="Container security analysis scan with CheckmarxOne Container Security"),
-                 id=f"projectid/{project_id}/scanid/{scan_id}",
+                 id=RunFactory.make_run_id(project_id, scan_id),
                  guid=scan_id,
                  correlation_guid=project_id),  
               column_kind="unicodeCodePoints")

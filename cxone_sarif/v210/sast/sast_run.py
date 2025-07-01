@@ -315,7 +315,7 @@ class SastRun(RunFactory):
       ))
     
 
-    driver = ToolComponent(name="SAST", guid=SastRun.get_tool_guid(),
+    driver = ToolComponent(name="CheckmarxOne-SAST", guid=SastRun.get_tool_guid(),
                            product_suite=platform,
                            full_name=f"Checkmarx SAST {version}",
                            short_description=MultiformatMessageString(text="Static code analysis scanner."),
@@ -339,7 +339,7 @@ class SastRun(RunFactory):
                results=results, 
                automation_details=RunAutomationDetails(
                  description=Message(text="Static analysis scan with CheckmarxOne SAST"),
-                 id=f"projectid/{project_id}/scanid/{scan_id}",
+                 id=RunFactory.make_run_id(project_id, scan_id),
                  guid=scan_id,
                  correlation_guid=project_id),  
                column_kind="unicodeCodePoints")

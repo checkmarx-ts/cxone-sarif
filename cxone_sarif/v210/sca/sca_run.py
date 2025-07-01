@@ -180,7 +180,7 @@ class ScaRun(RunFactory):
 
     results, rules = ScaRun.__get_vulnerabilities(client, ScaRun.get_value_safe("Vulnerabilities", scan_report), package_loc_index, project_id, scan_id)
 
-    driver = ToolComponent(name="SCA", guid=ScaRun.get_tool_guid(),
+    driver = ToolComponent(name="CheckmarxOne-SCA", guid=ScaRun.get_tool_guid(),
                            product_suite=platform,
                            full_name=f"Checkmarx SCA {version}",
                            short_description=MultiformatMessageString(text="Software composition analysis scanner."),
@@ -199,7 +199,7 @@ class ScaRun(RunFactory):
                results=results, 
                automation_details=RunAutomationDetails(
                  description=Message(text="Software composition analysis scan with CheckmarxOne SCA"),
-                 id=f"projectid/{project_id}/scanid/{scan_id}",
+                 id=RunFactory.make_run_id(project_id, scan_id),
                  guid=scan_id,
                  correlation_guid=project_id),  
               column_kind="unicodeCodePoints")

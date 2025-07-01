@@ -5,6 +5,7 @@ from cxone_api.util import page_generator
 from cxone_api.low.iac import retrieve_iac_security_scan_results
 from pathlib import Path
 import urllib
+from cxone_sarif.utils import SeverityTranslator
 from sarif_om import (Run,
                       ReportingDescriptor,
                       MultiformatMessageString,
@@ -25,6 +26,26 @@ class IaCRun(RunFactory):
   @staticmethod
   def get_tool_guid() -> str:
     return "033fb009-5cb2-4301-9ac9-62c295bcf8ff"
+  
+  __kics_query_docs_uri = "https://docs.kics.io/latest/queries/all-queries/"
+  
+  @staticmethod
+  def __make_help(description : str) -> MultiformatMessageString:
+    return MultiformatMessageString(text=description, 
+                                    markdown=description + f" [KICS Documentation]({IaCRun.__kics_query_docs_uri})")
+
+  @staticmethod
+  def __make_viewer_uri(display_endpoint : str, scan_id : str, project_id : str, result_id : str) -> str:
+    normalized_display_endpoint = display_endpoint.rstrip('/')
+    result_path = str(Path('results') / Path(scan_id) / Path (project_id))
+    return f"{normalized_display_endpoint}/{result_path}/kics?result-id=" + urllib.parse.quote_plus(result_id)
+  
+
+  @staticmethod
+  def __make_result_message(actual : str, viewer_uri : str) -> MultiformatMessageString:
+    return MultiformatMessageString(text=actual, 
+                                    markdown=actual + f" [View in CheckmarxOne]({viewer_uri})")
+
 
   @staticmethod
   async def factory(client : CxOneClient, project_id : str, scan_id : str, platform : str, version : str, organization : str, info_uri : str) -> Run:
@@ -42,10 +63,13 @@ class IaCRun(RunFactory):
         rules[vuln_id] = ReportingDescriptor(
           id = vuln_id,
           name = IaCRun.make_pascal_case_identifier(query_name),
-          help_uri = "https://docs.kics.io/latest/queries/all-queries/",
-          help = MultiformatMessageString(text=f"Use help URL to search for Query ID {IaCRun.get_value_safe('queryID', result)}"),
-          short_description = MultiformatMessageString(text=IaCRun.get_value_safe("type", result)),
+          help_uri = IaCRun.__kics_query_docs_uri,
+          help = IaCRun.__make_help(IaCRun.get_value_safe("description", result)),
+          short_description = MultiformatMessageString(text=IaCRun.get_value_safe("queryName", result)),
           full_description = MultiformatMessageString(text=IaCRun.get_value_safe("description", result)),
+          properties = {
+              "security-severity" : SeverityTranslator.translate_severity_to_level(IaCRun.get_value_safe("severity", result))
+          }
         )
 
 
@@ -53,18 +77,18 @@ class IaCRun(RunFactory):
       location = Location(
             physical_location=PhysicalLocation(
               artifact_location=ArtifactLocation(
-                uri=normalize_file_uri(IaCRun.get_value_safe("fileName", result)),
+                uri=normalize_file_uri(IaCRun.get_value_safe("fileName", result))),
                 region=Region(start_line=IaCRun.get_value_safe("line", result))
-            )))
+            ))
       
 
+      viewer_uri = IaCRun.__make_viewer_uri(client.display_endpoint, scan_id, project_id, IaCRun.get_value_safe("ID", result))
 
       results.append(Result(
-        message = Message(text=IaCRun.get_value_safe("actualValue", result)),
+        message = IaCRun.__make_result_message(IaCRun.get_value_safe("actualValue", result), viewer_uri),
         rule_id = vuln_id,
         locations = [location],
-        hosted_viewer_uri = f"{client.display_endpoint.rstrip('/')}/{str(Path('results') / Path(scan_id) / Path (project_id))}/kics?result-id=" +
-          urllib.parse.quote_plus(IaCRun.get_value_safe("ID", result)),
+        hosted_viewer_uri = viewer_uri,
         partial_fingerprints={
           "similarityID" : IaCRun.get_value_safe("similarityID", result),
           "queryKey" : vuln_id
@@ -80,7 +104,7 @@ class IaCRun(RunFactory):
         }
       ))
 
-    driver = ToolComponent(name="KICS", guid=IaCRun.get_tool_guid(),
+    driver = ToolComponent(name="CheckmarxOne-KICS", guid=IaCRun.get_tool_guid(),
                            product_suite=platform,
                            full_name=f"Checkmarx KICS {version}",
                            short_description=MultiformatMessageString(text="Infrastructure-As-Code scanner."),
@@ -96,7 +120,7 @@ class IaCRun(RunFactory):
                results=results, 
                automation_details=RunAutomationDetails(
                  description=Message(text="Infrastructure-As-Code analysis scan with CheckmarxOne KICS"),
-                 id=f"projectid/{project_id}/scanid/{scan_id}",
+                 id=RunFactory.make_run_id(project_id, scan_id),
                  guid=scan_id,
                  correlation_guid=project_id),  
               column_kind="unicodeCodePoints")
