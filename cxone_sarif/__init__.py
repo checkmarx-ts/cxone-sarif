@@ -6,6 +6,7 @@ from sarif_om import SarifLog, Run, VersionControlDetails
 from .__agent__ import __agent__
 from .__version__ import __version__
 from cxone_api.high.util import CxOneVersions
+from cxone_api.low.projects import retrieve_project_info
 from cxone_api.util import json_on_ok
 from cxone_api.low.scans import retrieve_scan_details
 from jsonpath_ng import parse
@@ -77,22 +78,25 @@ async def get_sarif_v210_log_for_scan(client : CxOneClient, opts : ReportOpts, s
 
     # Scan details
     scan_details = json_on_ok(await retrieve_scan_details(client, scan_id))
+    
+    project_id = scan_details['projectId']
+    project_details = json_on_ok(await retrieve_project_info(client, project_id))
 
     engines = __details_engines.find(scan_details).pop().value
 
     # 3.13.4 - runs is empty if there are no results.
     futures = []
     if not opts.SastOpts.SkipSast and 'sast' in engines:
-      futures.append(asyncio.get_running_loop().create_task(get_sast_run(client, opts.SastOpts, scan_details['projectId'], scan_id, PLATFORM_NAME, versions, __org, __info_uri)))
+      futures.append(asyncio.get_running_loop().create_task(get_sast_run(client, opts.SastOpts, project_id, scan_id, PLATFORM_NAME, versions, __org, __info_uri)))
 
     if not opts.SkipSca and 'sca' in engines:
-      futures.append(asyncio.get_running_loop().create_task(get_sca_run(client, scan_details['projectId'], scan_id, PLATFORM_NAME, versions, __org, __info_uri)))
+      futures.append(asyncio.get_running_loop().create_task(get_sca_run(client, project_id, scan_id, PLATFORM_NAME, versions, __org, __info_uri)))
 
     if not opts.SkipKics and 'kics' in engines:
-      futures.append(asyncio.get_running_loop().create_task(get_iac_run(client, scan_details['projectId'], scan_id, PLATFORM_NAME, versions, __org, __info_uri)))
+      futures.append(asyncio.get_running_loop().create_task(get_iac_run(client, project_id, scan_id, PLATFORM_NAME, versions, __org, __info_uri)))
 
     if not opts.SkipContainers and 'containers' in engines:
-      futures.append(asyncio.get_running_loop().create_task(get_containers_run(client, scan_details['projectId'], scan_id, PLATFORM_NAME, versions, __org, __info_uri)))
+      futures.append(asyncio.get_running_loop().create_task(get_containers_run(client, project_id, scan_id, PLATFORM_NAME, versions, __org, __info_uri)))
 
     if len(futures) > 0:
       completed, _ = await asyncio.wait(futures)
@@ -135,6 +139,7 @@ async def get_sarif_v210_log_for_scan(client : CxOneClient, opts : ReportOpts, s
                     "reportCompiler" : f"{__agent__}/{__version__}",
                     "scanId" : scan_id,
                     "scanDetails" : scan_details if scan_details is not None else None,
+                    "projectDetails" : project_details,
                     "versions" : versions.to_dict()
                   }
                 )
