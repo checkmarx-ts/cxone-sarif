@@ -13,7 +13,7 @@ async def main():
   scan_ids = [x['id'] for x in scans['scans']]
 
   exit(subprocess.run(["cxone-sarif", "--tenant", os.environ['CXONE_TENANT'], "--region", "US", "--client", os.environ['CXONE_CLIENT_ID'],
-                       "--secret", os.environ['CXONE_CLIENT_SECRET'] ] + scan_ids).returncode)
+                       "--secret", os.environ['CXONE_CLIENT_SECRET'], "--level", "DEBUG" ] + scan_ids).returncode)
 
 if __name__ == "__main__":
   asyncio.run(main())
