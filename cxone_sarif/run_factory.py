@@ -5,6 +5,10 @@ from cxone_api import CxOneClient
 
 class RunFactory:
 
+  _default_help = MultiformatMessageString(text="Please visit https://docs.checkmarx.com/ for more information.")
+  _default_help_uri = "https://docs.checkmarx.com/"
+
+
   """
   A static GUID for the tool producing the Run entry in the Sarif log.
   """
@@ -12,6 +16,9 @@ class RunFactory:
   def get_tool_guid() -> str:
     raise NotImplementedError("get_tool_guid")
   
+  @staticmethod
+  def make_run_id(project_id : str, scan_id : str) -> str:
+    return f"projectid/{project_id}/scanid/{scan_id}/"
 
   @staticmethod
   def get_value_safe(key : str, json : Dict) -> Any:
@@ -40,9 +47,13 @@ class RunFactory:
   def make_pascal_case_identifier(s : str) -> str:
     return "".join([x.capitalize() for x in RunFactory.__prep_identifier(s).split(" ")])
 
+  @staticmethod
+  def make_title(language : str, query_name : str) -> str:
+    qname = query_name.replace("_", " ")
+    return f"{language.capitalize()}: {qname}"
 
   @staticmethod
-  def make_cve_description(cve_id : str, description : str, references : List[str]) -> MultiformatMessageString:
+  def make_cve_description(cve_id : str, description : str, references : List[str], help_url : str = None) -> MultiformatMessageString:
 
     if references is not None:
       text_references = "\n".join(references)
@@ -52,10 +63,12 @@ class RunFactory:
       text_references = ""
       markdown_references = ""
 
+    help = "" if help_url is None else f"\n\n[Details]({help_url})"
+
     return MultiformatMessageString(
       properties = { "references" : references },
       text = f"{cve_id}\n{description}\n\n{text_references}",
-      markdown = f"# {cve_id}\n## Description\n{description}\n{markdown_references}"
+      markdown = f"# {cve_id}\n## Description\n{description}\n{markdown_references}{help}"
     )
 
   @staticmethod

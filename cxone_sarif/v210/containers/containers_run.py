@@ -1,4 +1,6 @@
+import base64, urllib
 from cxone_sarif.run_factory import RunFactory
+from cxone_sarif.utils import normalize_file_uri
 from cxone_api import CxOneClient
 from cxone_api.util import page_generator
 from cxone_api.low.all_scanners_results import retrieve_scan_results_all_scanners
@@ -20,7 +22,14 @@ class ContainersRun(RunFactory):
 
   @staticmethod
   def get_tool_guid() -> str:
-    return "77433f9c-f793-4503-847d-b578ad7ba46a"
+    return "3aaeea89-14a9-4b83-a6f3-86b209d7e887"
+  
+  @staticmethod
+  def __make_viewer_uri(display_endpoint : str, project_id : str, scan_id : str, file_path : str, image_name : str, image_tag : str) -> str:
+    encoded_file_path = urllib.parse.quote_plus(base64.b64encode(urllib.parse.quote_plus(file_path).encode("UTF-8")).decode())
+    encoded_image_tag = urllib.parse.quote_plus(base64.b64encode(urllib.parse.quote_plus(f"{image_name}:{image_tag}").encode("UTF-8")).decode())
+    return display_endpoint.rstrip("/") + f"/container-security-results/{project_id}/{scan_id}/results/{encoded_file_path}/{encoded_image_tag}/vulnerabilities"
+  
 
   @staticmethod
   async def factory(client : CxOneClient, project_id : str, scan_id : str, platform : str, version : str, organization : str, info_uri : str) -> Run:
@@ -31,7 +40,7 @@ class ContainersRun(RunFactory):
 
     # This is a bit inefficient, maybe one day containers will have its own result API.
     # This data stream lacks some data required for best results.
-    async for result in page_generator(retrieve_scan_results_all_scanners, array_element="results", offset_is_by_count=False,
+    async for result in page_generator(retrieve_scan_results_all_scanners, array_element="results",
                                        client=client, scan_id=scan_id, limit=100):
 
       if not "containers" == ContainersRun.get_value_safe("type", result):
@@ -48,31 +57,39 @@ class ContainersRun(RunFactory):
       if vuln_id not in rules.keys():
         details = ContainersRun.get_value_safe("vulnerabilityDetails", result)
 
+        help_uri = ContainersRun.make_cve_help_url(client, cve_id)
+
         rules[vuln_id] = ReportingDescriptor(
           id = vuln_id,
           name = ContainersRun.make_pascal_case_identifier(f"Advisory {cve_id}"),
-          help_uri = ContainersRun.make_cve_help_url(client, cve_id),
-          help = MultiformatMessageString(text="See published description."),
+          help_uri = help_uri,
+          help = ContainersRun.make_cve_description(cve_id, ContainersRun.get_value_safe("description", result), None, help_uri),
           short_description = MultiformatMessageString(text=cve_id),
-          full_description = ContainersRun.make_cve_description(cve_id, ContainersRun.get_value_safe("description", result), None),
+          full_description = ContainersRun.make_cve_description(cve_id, ContainersRun.get_value_safe("description", result), None, help_uri),
           properties = {
-            "cvss" : ContainersRun.get_value_safe("cvss", details),
+            "cvssScore" : ContainersRun.get_value_safe("cvss", details),
             "cwe" : ContainersRun.get_value_safe("cweId", details),
+            "security-severity" : str(ContainersRun.get_value_safe("cvssScore", details)),
           }
         )
 
+      viewer_uri = ContainersRun.__make_viewer_uri(client.display_endpoint, project_id, scan_id, 
+                                                   ContainersRun.get_value_safe('imageFilePath', vuln_data),
+                                                   ContainersRun.get_value_safe('imageName', vuln_data),
+                                                   ContainersRun.get_value_safe('imageTag', vuln_data))
+
       results.append(Result(
-        message = Message(text=ContainersRun.get_value_safe("description", result)),
+        message = Message(text=f"Detected in {package_spec}. See: {viewer_uri}", markdown=f"[View in CheckmarxOne]({viewer_uri})"),
         rule_id = vuln_id,
         locations = [
           Location(
             physical_location=PhysicalLocation(
               artifact_location=ArtifactLocation(
-                uri=f"file:/{ContainersRun.get_value_safe('imageFilePath', vuln_data).lstrip('/')}"),
-              region=Region(start_line=1)
+                uri=normalize_file_uri(ContainersRun.get_value_safe('imageFilePath', vuln_data))),
+                region=Region(start_line=1)
             ))
         ],
-        hosted_viewer_uri = client.display_endpoint.rstrip("/") + f"/container-security-results/{project_id}/{scan_id}/results/" ,
+        hosted_viewer_uri = viewer_uri,
         partial_fingerprints={
           "packageId" : package_id,
           "packageSpec" : package_spec,
@@ -91,7 +108,7 @@ class ContainersRun(RunFactory):
         }
       ))
 
-    driver = ToolComponent(name="Container Security", guid=ContainersRun.get_tool_guid(),
+    driver = ToolComponent(name="CheckmarxOne-Container Security", guid=ContainersRun.get_tool_guid(),
                            product_suite=platform,
                            full_name=f"Checkmarx Container Security {version}",
                            short_description=MultiformatMessageString(text="Container security analysis scanner."),
@@ -107,7 +124,7 @@ class ContainersRun(RunFactory):
                results=results, 
                automation_details=RunAutomationDetails(
                  description=Message(text="Container security analysis scan with CheckmarxOne Container Security"),
-                 id=f"projectid/{project_id}/scanid/{scan_id}",
+                 id=RunFactory.make_run_id(project_id, scan_id),
                  guid=scan_id,
                  correlation_guid=project_id),  
               column_kind="unicodeCodePoints")

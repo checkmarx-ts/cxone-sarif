@@ -12,12 +12,16 @@ from sarif_om import (Run,
                       ArtifactLocation,
                       Region,
                       RunAutomationDetails,
-                      Tool)
+                      Tool,
+                      CodeFlow,
+                      ThreadFlow,
+                      ThreadFlowLocation)
 from cxone_api.low.sast_metadata import retrieve_scan_metadata, retrieve_scan_metrics
 from cxone_api.low.sast_results import retrieve_sast_scan_results
 from cxone_api.low.api import retrieve_apisec_security_risks, retrieve_risk_details
 from cxone_sarif.sast_query_cache import QueryCache
 from cxone_sarif.run_factory import RunFactory
+from cxone_sarif.utils import normalize_file_uri, SeverityTranslator
 from jsonpath_ng import parse
 import uuid,requests,hashlib,urllib
 from pathlib import Path
@@ -40,24 +44,30 @@ class SastRun(RunFactory):
   __metrics_scannedFiles = parse("$.scannedFilesPerLanguage")
   __results_queryIDs = parse("$.results[*].queryID")
 
-  __cache = QueryCache ()
+  __cache = QueryCache()
+
 
   @staticmethod
   def get_tool_guid() -> str:
-    return "79cc9d1f-6183-4e37-8656-ef1a16dac7eb"
+    return "1ca3e5a3-f84e-43aa-8b7c-fe39c2cecac4"
 
   @staticmethod
   async def __partial_file_descriptor_factory(language : str, count : int) -> ReportingDescriptor:
+    desc = MultiformatMessageString(text="Some files were only partially parsed during the scan.")
+
     return ReportingDescriptor(
       id="SAST-PARTIAL-FILES-LANG",
       name="SastPartialFilesByLanguage",
       guid=str(uuid.uuid4()),
+      help=RunFactory._default_help,
+      help_uri=RunFactory._default_help_uri,
       message_strings={"language" : MultiformatMessageString(text=language),
                        "partiallyGoodFiles" : MultiformatMessageString(text=str(count))},
-      short_description=MultiformatMessageString(text="Some files were only partially parsed during the scan."))
+      short_description=desc, full_description=desc)
 
   @staticmethod
   async def __bad_file_descriptor_factory(language : str, count : int) -> ReportingDescriptor:
+    desc = MultiformatMessageString(text="Some files failed to be parsed.  The contents of the file may not be syntactically valid or is not understood by the parser.")
 
     return ReportingDescriptor(
       id="SAST-BAD-FILES-LANG",
@@ -65,7 +75,7 @@ class SastRun(RunFactory):
       guid=str(uuid.uuid4()),
       message_strings={"language" : MultiformatMessageString(text=language),
                        "badFiles" : MultiformatMessageString(text=str(count))},
-      short_description=MultiformatMessageString(text="Some files failed to be parsed.  The contents of the file may not be syntactically valid or is not understood by the parser."))
+      short_description=desc, full_description=desc)
   
   @staticmethod
   async def __notifications_factory(metrics : Dict) -> List[ReportingDescriptor]:
@@ -89,7 +99,7 @@ class SastRun(RunFactory):
     return response
   
   @staticmethod
-  def __make_description(description : str, source_node : Dict, sink_node : Dict, apisec_results : List[ApiSecResult]) -> Message:
+  def __make_description(description : str, source_node : Dict, sink_node : Dict, apisec_results : List[ApiSecResult], viewer_link : str) -> Message:
     text = markdown = description
 
     def get_or_unknown(node, key):
@@ -119,7 +129,10 @@ class SastRun(RunFactory):
         .replace("@DestinationMethod", f"**{get_or_unknown(sink_node, 'method')}**") \
         .replace("@DestinationLine", f"**{str(get_or_unknown(sink_node, 'line'))}**") \
         .replace("@DestinationElement", f"**{get_or_unknown(sink_node, 'name')}**")
-      
+
+      if viewer_link is not None:
+        markdown += f" [View in CheckmarxOne]({viewer_link})"
+
       if apisec_results is not None:
         text += "\n\nAPI Endpoints:\n"
         markdown += "\n\n**API Endpoints:**\n"
@@ -127,6 +140,7 @@ class SastRun(RunFactory):
         for ares in apisec_results:
           text += f"{ares.http_method} {ares.endpoint_path}\n"
           markdown += f"* {ares.http_method} {ares.endpoint_path}\n"
+      
 
     return Message(text=text, markdown=markdown)
 
@@ -175,7 +189,7 @@ class SastRun(RunFactory):
     rules = {}
     results = []
 
-    async for result in page_generator(SastRun.__fetch_results_with_cached_descriptions, "results", client=client, scan_id=scan_id):
+    async for result in page_generator(SastRun.__fetch_results_with_cached_descriptions, "results", client=client, scan_id=scan_id, limit=200):
       group = SastRun.get_value_safe("group", result)
       query_name = SastRun.get_value_safe("queryName", result)
       queryId = int(result['queryID'])
@@ -183,22 +197,26 @@ class SastRun(RunFactory):
 
       query_desc = await SastRun.__cache.get(client, queryId)
 
+      # Cache the rule if it hasn't been seen before.
       if queryId not in rules.keys():
         rules[queryId] = ReportingDescriptor(
           id = rule_id_key,
           name=SastRun.make_pascal_case_identifier(query_name),
-          short_description = MultiformatMessageString(text=query_desc['cause']),
-          full_description = MultiformatMessageString(text=query_desc['risk']),
-          help = MultiformatMessageString(text=query_desc['generalRecommendations']),
+          short_description = 
+            MultiformatMessageString(text=SastRun.make_title(SastRun.get_value_safe("languageName", result), SastRun.get_value_safe("queryName", result))),
+          full_description = MultiformatMessageString(text=query_desc['risk'] if query_desc is not None else "Not available."),
+          help = MultiformatMessageString(text=query_desc['generalRecommendations'] if query_desc is not None else "Not available."),
+          help_uri = SastRun._default_help_uri,
           properties = {
             "queryID" : queryId,
+            "security-severity" : str(SastRun.get_value_safe("cvssScore", result)),
           })
 
       nodes = SastRun.get_value_safe("nodes", result)
-      locations = []
+      threadflow_locations = None
+      cur_loop_loc = None
       filePathsFingerprint = hashlib.sha256()
       if nodes is not None:
-        index = 0
         for node in nodes:
           filePathsFingerprint.update(bytes(SastRun.get_value_safe("fileName", node), "UTF-8"))
 
@@ -224,12 +242,16 @@ class SastRun(RunFactory):
             return column_val + length_val
           
 
-          locations.append(
-            Location(
-              id=index, 
+          # Last node is the sink, this will be reported as the single
+          # location per the Sarif spec.  (Sarif spec says this should
+          # have only one element since SAST results don't report related
+          # locations for each flow.)  After all the loops, sink_loc will be the
+          # sink.
+          cur_loop_loc = Location(
+              id=0, 
               physical_location=PhysicalLocation(
                 artifact_location=ArtifactLocation(
-                  uri=f"file:{SastRun.get_value_safe('fileName', node)}"
+                  uri=normalize_file_uri(SastRun.get_value_safe('fileName', node))
                 ),
               region=Region(
                 start_line=SastRun.get_value_safe("line", node),
@@ -243,9 +265,16 @@ class SastRun(RunFactory):
                   "nodeID" : SastRun.get_value_safe("nodeID", node),
                   "fullName" : SastRun.get_value_safe("fullName", node)
                 }
-              ))))
-          index += 1
+              )))
+          
+          thread_flow_loc = ThreadFlowLocation(
+            location=cur_loop_loc
+          )
 
+          if threadflow_locations is None:
+            threadflow_locations = [thread_flow_loc]
+          else:
+            threadflow_locations.append(thread_flow_loc)
 
       props = {
           "state" : result['state'],
@@ -267,21 +296,26 @@ class SastRun(RunFactory):
       else:
         api_sec_props = None
 
+      viewer_link = f"{client.display_endpoint.rstrip('/')}/" + \
+          str(Path(f"sast-results/{project_id}/{scan_id}?resultId={urllib.parse.quote_plus(result['pathSystemID'])}"))
+
       results.append(Result(
-        message = SastRun.__make_description(query_desc['resultDescription'], nodes[0], nodes[-1:][0], api_sec_props),
+        message = SastRun.__make_description(query_desc['resultDescription'] if query_desc is not None else "Not available.", 
+                    nodes[0], nodes[-1:][0], api_sec_props, viewer_link),
         rule_id = rule_id_key,
-        locations=locations,
-        hosted_viewer_uri=f"{client.display_endpoint.rstrip('/')}/" + str(Path(f"sast-results/{project_id}/{scan_id}?resultId={urllib.parse.quote_plus(result['pathSystemID'])}")),
+        locations=[cur_loop_loc] if cur_loop_loc is not None else None,
+        hosted_viewer_uri=viewer_link,
         partial_fingerprints={
           "similarityID" : str(result['similarityID']),
           "queryKey" : rule_id_key,
           "nodeFilePathsSha256" : filePathsFingerprint.hexdigest(),
         },
-        properties=props
+        properties=props,
+        code_flows=[CodeFlow(thread_flows=[ThreadFlow(locations=threadflow_locations)])] if threadflow_locations is not None else None
       ))
     
 
-    driver = ToolComponent(name="SAST", guid=SastRun.get_tool_guid(),
+    driver = ToolComponent(name="CheckmarxOne-SAST", guid=SastRun.get_tool_guid(),
                            product_suite=platform,
                            full_name=f"Checkmarx SAST {version}",
                            short_description=MultiformatMessageString(text="Static code analysis scanner."),
@@ -305,7 +339,7 @@ class SastRun(RunFactory):
                results=results, 
                automation_details=RunAutomationDetails(
                  description=Message(text="Static analysis scan with CheckmarxOne SAST"),
-                 id=f"projectid/{project_id}/scanid/{scan_id}",
+                 id=RunFactory.make_run_id(project_id, scan_id),
                  guid=scan_id,
                  correlation_guid=project_id),  
                column_kind="unicodeCodePoints")

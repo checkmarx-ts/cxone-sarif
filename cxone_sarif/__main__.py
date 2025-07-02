@@ -55,7 +55,7 @@ async def main():
 
   -k                  Ignore SSL verification failures. 
 
-  --proxy IP:PORT     A proxy server to use for communication.
+  --proxy URL     A proxy server to use for communication.
 
   
   SARIF Log Generation Options:
@@ -109,8 +109,8 @@ async def main():
 
     if args['--proxy'] is not None:
       proxy = {
-        "HTTP": args['--proxy'],
-        "HTTPS" : args['--proxy']
+        "http": args['--proxy'],
+        "https" : args['--proxy']
       }
     else:
       proxy = None

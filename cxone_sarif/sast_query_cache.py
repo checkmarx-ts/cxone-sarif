@@ -14,12 +14,17 @@ class QueryCache:
     async with self.__lock:
       fetch = [x for x in query_ids if x not in self.__cache.keys()]
       if len(fetch) > 0:
-        for description in json_on_ok(await get_sast_query_description(client, query_ids)):
-          self.__cache[int(description['queryId'])] = description
+        response_json = json_on_ok(await get_sast_query_description(client, query_ids))
+        if response_json is not None:
+          for description in response_json:
+            self.__cache[int(description['queryId'])] = description
 
   async def add(self, client : CxOneClient, query_ids : Iterable[int]) -> None:
     await self.__populate(client, query_ids)
 
   async def get(self, client : CxOneClient, query_id : int) -> Any:
     await self.__populate(client, [query_id])
-    return self.__cache[query_id]
+    if query_id in self.__cache.keys():
+      return self.__cache[query_id]
+    else:
+      return None

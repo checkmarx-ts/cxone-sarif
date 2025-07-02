@@ -1,3 +1,4 @@
+from cxone_sarif.utils import normalize_file_uri
 from cxone_sarif.run_factory import RunFactory
 from cxone_api import CxOneClient
 from cxone_api.util import json_on_ok
@@ -14,10 +15,12 @@ from sarif_om import (Run,
                       MultiformatMessageString,
                       ReportingDescriptor,
                       Location,
-                      LogicalLocation,
                       PhysicalLocation,
                       Region,
-                      Result)
+                      Result,
+                      CodeFlow,
+                      ThreadFlow,
+                      ThreadFlowLocation)
 
 
 
@@ -25,9 +28,22 @@ class ScaRun(RunFactory):
 
   @staticmethod
   def get_tool_guid() -> str:
-    return "03040f8e-d672-4932-9429-c47cb8902357"
+    return "3535ec30-c264-4cfb-a816-67984dc28151"
 
 
+  @staticmethod
+  def __make_result_msg(ep_bullets : List[str], viewer_link : str, package_manager : str, package_name : str, package_version : str) -> Message:
+    desc = f"Displaying manifest where package reference is found. Detected in package **{package_name}** " + \
+      f"version **{package_version}** from package manager **{package_manager}**."
+
+    if len(ep_bullets) > 0:
+      desc += "\n\n"
+      desc = desc + "\n\nExploitable Path found some locations where package may be referenced:\n\n"
+      for bullet in ep_bullets:
+        desc += "\n* " + bullet
+      desc += "\n\n"
+
+    return Message(text=desc, markdown=desc + f" [View in CheckmarxOne]({viewer_link})")
 
 
   @staticmethod
@@ -46,7 +62,7 @@ class ScaRun(RunFactory):
           id = vuln_id,
           name = ScaRun.make_pascal_case_identifier(f"Advisory {cve_id}"),
           help_uri = ScaRun.make_cve_help_url(client, cve_id),
-          help = MultiformatMessageString(text="See published description."),
+          help = ScaRun.make_cve_description(cve_id, ScaRun.get_value_safe("Description", vuln), ScaRun.get_value_safe("References", vuln)),
           short_description = MultiformatMessageString(text=cve_id),
           full_description = ScaRun.make_cve_description(cve_id, ScaRun.get_value_safe("Description", vuln), ScaRun.get_value_safe("References", vuln)),
           properties = {
@@ -57,51 +73,84 @@ class ScaRun(RunFactory):
             "cwe" : ScaRun.get_value_safe("Cwe", vuln),
             "epssValue" : str(ScaRun.get_value_safe("EpssValue", vuln)),
             "epssPercentile" : str(ScaRun.get_value_safe("EpssPercentile", vuln)),
+            "security-severity" : str(ScaRun.get_value_safe("Score", vuln))
           }
         )
 
       exploitable_methods = ScaRun.get_value_safe("ExploitableMethods", vuln)
-      logical_locations = None
+      code_flows = None
+      ep_bullets = []
       if ScaRun.get_value_safe("ExploitablePath", vuln) and exploitable_methods is not None and len(exploitable_methods) > 0:
+        code_flows = []
 
-        logical_locations = []
+        ep_index = 0
         for method in exploitable_methods:
-          logical_locations.append(LogicalLocation(
-            name = ScaRun.get_value_safe("ShortName", method),
-            fully_qualified_name = ScaRun.get_value_safe("SourceFile", method),
-            properties = {
-              "FullName" : ScaRun.get_value_safe("FullName", method),
-              "NameSpace" : ScaRun.get_value_safe("NameSpace", method),
-              "Line" : str(ScaRun.get_value_safe("Line", method)),
-            }
-          ))
-      
-      locations = None
+          ep_bullets.append("{}: {} Line: {}".format(
+            ScaRun.get_value_safe("FullName", method), ScaRun.get_value_safe('SourceFile', method), ScaRun.get_value_safe("Line", method)))
 
-      if logical_locations is not None and len(logical_locations) > 0:
-        locations = [Location(logical_locations=logical_locations)]
-        
-      if package_id in location_index.keys():
-        for artifact_loc in location_index[package_id]:
-          if locations is None:
-            locations = []
-          locations.append (
-            Location(
+          # Exploitable path doesn't provide enough information to get a nice flow highlight,
+          # so like display is all that is shown.  EP also references code that is in the 
+          # package but not in the repo.  It is not possible to tell the difference, so all
+          # are shown as paths.
+          loc = Location(
+              id=ep_index,
               physical_location=PhysicalLocation(
                 artifact_location=ArtifactLocation(
-                  uri=f"file:/{artifact_loc.lstrip('/')}"),
-                region=Region(start_line=1)
+                  uri=normalize_file_uri(ScaRun.get_value_safe('SourceFile', method))
+                ),
+              region=Region(
+                start_line=ScaRun.get_value_safe("Line", method),
+                start_column=1,
+                end_column=1,
+                properties={
+                  "NameSpace" : ScaRun.get_value_safe("NameSpace", method),
+                  "FullName" : ScaRun.get_value_safe("FullName", method),
+                  "ShortName" : ScaRun.get_value_safe("ShortName", method),
+                })))
+
+          code_flows.append(CodeFlow(thread_flows=[ThreadFlow(locations=[ThreadFlowLocation(location=loc)])]))
+
+          ep_index += 1
+
+      
+      locations = None
+      
+      if package_id in location_index.keys():
+        
+        if locations is None:
+          locations = []
+        index = len(locations)
+
+        # There can be many locations where this package is referenced.  Sarif
+        # spec says only use more than one location if every location needs to
+        # be changed to fix the issue.  GH displays only the first one,
+        # but all will be put here for other Sarif consumers.
+        for artifact_loc in location_index[package_id]:
+          locations.append (
+            Location(
+              id=index,
+              physical_location=PhysicalLocation(
+                artifact_location=ArtifactLocation(
+                  uri=normalize_file_uri(artifact_loc)),
+                  region=Region(start_line=1, start_column=1, end_column=1)
               )))
+          index += 1
 
 
       vuln_path = urllib.parse.quote_plus(f"/vulnerabilities/{urllib.parse.quote_plus(f'{cve_id}:{package_id}')}")
 
+      viewer_url = client.display_endpoint.rstrip("/") + "/" + str(Path(f"results/{project_id}/{scan_id}/sca?internalPath=" + \
+          f"{vuln_path}%2FvulnerabilityDetailsGql"))
+
       results.append(Result(
-        message = Message(text=ScaRun.get_value_safe("Description", vuln)),
+        message = ScaRun.__make_result_msg(ep_bullets, viewer_url, 
+                                           ScaRun.get_value_safe("PackageManager", vuln), 
+                                           ScaRun.get_value_safe("PackageName", vuln),
+                                           ScaRun.get_value_safe("PackageVersion", vuln)),
         rule_id = vuln_id,
         locations = locations,
-        hosted_viewer_uri = client.display_endpoint.rstrip("/") + "/" + str(Path(f"results/{project_id}/{scan_id}/sca?internalPath=" + 
-          f"{vuln_path}/vulnerabilityDetailsGql")),
+        hosted_viewer_uri = viewer_url,
+        code_flows=code_flows,
         partial_fingerprints={
           "packageId" : package_id,
           "cve" : cve_id
@@ -135,7 +184,7 @@ class ScaRun(RunFactory):
 
     results, rules = ScaRun.__get_vulnerabilities(client, ScaRun.get_value_safe("Vulnerabilities", scan_report), package_loc_index, project_id, scan_id)
 
-    driver = ToolComponent(name="SCA", guid=ScaRun.get_tool_guid(),
+    driver = ToolComponent(name="CheckmarxOne-SCA", guid=ScaRun.get_tool_guid(),
                            product_suite=platform,
                            full_name=f"Checkmarx SCA {version}",
                            short_description=MultiformatMessageString(text="Software composition analysis scanner."),
@@ -154,7 +203,7 @@ class ScaRun(RunFactory):
                results=results, 
                automation_details=RunAutomationDetails(
                  description=Message(text="Software composition analysis scan with CheckmarxOne SCA"),
-                 id=f"projectid/{project_id}/scanid/{scan_id}",
+                 id=RunFactory.make_run_id(project_id, scan_id),
                  guid=scan_id,
                  correlation_guid=project_id),  
               column_kind="unicodeCodePoints")
