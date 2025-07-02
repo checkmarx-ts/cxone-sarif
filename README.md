@@ -9,8 +9,9 @@ the SARIF logs output by the CheckmarxOne CLI.
 ## Features
 
 * Generates one SARIF `Run` entry per scan engine.
-  * SAST with API Security scan inventory items added to `Result` entries as applicable.
-  * SCA
+  * SAST with detected API Security results
+  * SCA with detected Exploitable Path results
+  * KICS
   * Container Security
 * A command-line interface is available that can generate SARIF logs in files for one or more scan ids.
 * The module API can be used to integrate SARIF log generation into your own applications.
@@ -152,3 +153,73 @@ cxone-sarif \
   --use-env-oauth \
   10253e85-2d70-450e-bc5d-9e54dc5f10c5 97068a6d-f2fa-4047-bea1-bd74df3a4059 2> failures.txt
 ```
+
+# Use with GitHub Code Scanning
+
+The primary testing platform for the Sarif was to use the [Sarif Web Validator](https://sarifweb.azurewebsites.net/Validation) along with [GitHub's code security](https://docs.github.com/en/code-security/code-scanning/integrating-with-code-scanning/uploading-a-sarif-file-to-github).  Other platforms that can ingest Sarif
+can likely use the Sarif to achieve similar results.
+
+When the Sarif file is imported, the tools used for scanning are noted at the top of the alert list.
+
+![sarif-tools](doc-assets/sarif-tools.png)
+
+Drilling into the tools link shows the list of tool that reported alerts.
+
+![sarif-tools-list](doc-assets/sarif-tools-list.png)
+
+Each tool has a "Setup Type" view.
+
+![sarif-tools-setup-type](doc-assets/sarif-tools-setup-type.png)
+
+The details view can show an enumeration of result uploads, each having the details:
+
+* Checkmarx One Project Id.
+* Checkmarx One Scan Id.
+* Checkmarx One engine version.
+* A downloadable CSV of issues reported by this engine.
+
+![sarif-tools-setup-type-details](doc-assets/sarif-tools-setup-type-details.png)
+
+## SAST Results View
+
+A SAST result will have the result summary and description of the issue.  If a data flow is available, the "Show Paths" link will open a window that allows traversal of the nodes in the data flow.
+
+![sarif-sast-example](doc-assets/sarif-sast-example.png)
+
+
+The data flow will show the code snippets from source to sink, similar to the Checkmarx One triage display.
+
+![sarif-sast-flows-example](doc-assets/sarif-sast-flows-example.png)
+
+
+If there is an API Security result associated with the SAST example, the API security endpoints will be enumerated in the result summary.
+
+![sarif-sast-apisec-example](doc-assets/sarif-sast-apisec-example.png)
+
+
+## SCA Results View
+
+The SCA results will show the manifest file that references the vulnerable package along with the CVE description.
+
+![sarif-sca-example](doc-assets/sarif-sca-example.png)
+
+If exploitable path results were detected, hints are displayed in the result summary.  The "Show Paths" link will open a display showing
+the location in the code where the package may be referenced.
+
+![sarif-sca-ep-example](doc-assets/sarif-sca-ep-example.png)
+
+![sarif-sca-ep-path-example](doc-assets/sarif-sca-ep-path-example.png)
+
+## Container Security Results View
+
+The container security results will show the file where the result has been
+detected.  A brief description of the CVE is also provided.
+
+![sarif-container-security-example](doc-assets/sarif-container-security-example.png)
+
+## KICS Results View
+
+The KICS results will show the file where the result has been
+detected.  A brief description of the detected issue is also provided.
+
+![sarif-kics-example](doc-assets/sarif-kics-example.png)
