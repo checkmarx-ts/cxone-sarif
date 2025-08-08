@@ -190,6 +190,10 @@ class SastRun(RunFactory):
     results = []
 
     async for result in page_generator(SastRun.__fetch_results_with_cached_descriptions, "results", client=client, scan_id=scan_id, limit=200):
+      state = SastRun.get_value_safe("state", result)
+      if state is not None and state == "NOT_EXPLOITABLE":
+        continue
+      
       group = SastRun.get_value_safe("group", result)
       query_name = SastRun.get_value_safe("queryName", result)
       queryId = int(result['queryID'])
