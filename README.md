@@ -6,6 +6,9 @@ It can be executed as a command line application or integrated into your own app
 module's API.  The generated SARIF log file is designed to align closer with the SARIF standard than
 the SARIF logs output by the CheckmarxOne CLI.
 
+Review the [release notes](RELEASE_NOTES.md) for version updates.
+
+
 ## Features
 
 * Generates one SARIF `Run` entry per scan engine.

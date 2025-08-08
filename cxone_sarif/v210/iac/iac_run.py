@@ -53,6 +53,9 @@ class IaCRun(RunFactory):
     results = []
 
     async for result in page_generator(retrieve_iac_security_scan_results, "results", client=client, scan_id=scan_id):
+      state = IaCRun.get_value_safe("state", result)
+      if state is not None and state == "NOT_EXPLOITABLE":
+        continue
 
       query_name = IaCRun.get_value_safe("queryName", result)
       query_platform = IaCRun.get_value_safe("platform", result)
@@ -93,6 +96,7 @@ class IaCRun(RunFactory):
           "similarityID" : IaCRun.get_value_safe("similarityID", result),
           "queryKey" : vuln_id
         },
+        level=RunFactory.translate_severity_to_level(IaCRun.get_value_safe("severity", result)),
         properties = {
           "severity" : IaCRun.get_value_safe("severity", result),
           "platform" : query_platform,
