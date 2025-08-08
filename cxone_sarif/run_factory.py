@@ -22,10 +22,18 @@ class RunFactory:
 
   @staticmethod
   def get_value_safe(key : str, json : Dict) -> Any:
+    if json is None:
+      return None
+    
     if key in json.keys():
       return json[key]
     else:
       return None
+    
+  @staticmethod
+  def get_value_safe_with_default(key: str, json : Dict, default : Any) -> Any:
+    value = RunFactory.get_value_safe(key, json)
+    return value if value is not None else default
 
   @staticmethod
   def __prep_identifier(s : str) -> str:
@@ -89,3 +97,15 @@ class RunFactory:
       return __nvd_help_base + cve_id
     else:
       return __sca_help_base + cve_id
+    
+  @staticmethod
+  def translate_severity_to_level(severity : str) -> str:
+
+    map = {
+      "critical" : "error",
+      "high" : "error",
+      "medium" : "error",
+      "low" : "warning",
+    }
+
+    return map.get(severity.lower(), "note") if severity is not None else "note"

@@ -93,6 +93,7 @@ class IaCRun(RunFactory):
           "similarityID" : IaCRun.get_value_safe("similarityID", result),
           "queryKey" : vuln_id
         },
+        level=RunFactory.translate_severity_to_level(IaCRun.get_value_safe("severity", result)),
         properties = {
           "severity" : IaCRun.get_value_safe("severity", result),
           "platform" : query_platform,

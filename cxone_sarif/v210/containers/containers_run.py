@@ -96,6 +96,7 @@ class ContainersRun(RunFactory):
           "imageSpec" : image_spec,
           "cve" : cve_id
         },
+        level=RunFactory.translate_severity_to_level(ContainersRun.get_value_safe("severity", result)),
         properties = {
           "severity" : ContainersRun.get_value_safe("severity", result),
           "packageId" : package_id,

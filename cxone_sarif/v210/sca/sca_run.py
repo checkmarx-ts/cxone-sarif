@@ -148,6 +148,7 @@ class ScaRun(RunFactory):
                                            ScaRun.get_value_safe("PackageName", vuln),
                                            ScaRun.get_value_safe("PackageVersion", vuln)),
         rule_id = vuln_id,
+        level=RunFactory.translate_severity_to_level(ScaRun.get_value_safe("Severity", vuln)),
         locations = locations,
         hosted_viewer_uri = viewer_url,
         code_flows=code_flows,

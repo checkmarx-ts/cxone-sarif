@@ -204,8 +204,8 @@ class SastRun(RunFactory):
           name=SastRun.make_pascal_case_identifier(query_name),
           short_description = 
             MultiformatMessageString(text=SastRun.make_title(SastRun.get_value_safe("languageName", result), SastRun.get_value_safe("queryName", result))),
-          full_description = MultiformatMessageString(text=query_desc['risk'] if query_desc is not None else "Not available."),
-          help = MultiformatMessageString(text=query_desc['generalRecommendations'] if query_desc is not None else "Not available."),
+          full_description = MultiformatMessageString(text=RunFactory.get_value_safe_with_default("risk", query_desc, "Not available.")),
+          help = MultiformatMessageString(text=RunFactory.get_value_safe_with_default("generalRecommendations", query_desc, "Not available.")),
           help_uri = SastRun._default_help_uri,
           properties = {
             "queryID" : queryId,
@@ -300,9 +300,10 @@ class SastRun(RunFactory):
           str(Path(f"sast-results/{project_id}/{scan_id}?resultId={urllib.parse.quote_plus(result['pathSystemID'])}"))
 
       results.append(Result(
-        message = SastRun.__make_description(query_desc['resultDescription'] if query_desc is not None else "Not available.", 
+        message = SastRun.__make_description(RunFactory.get_value_safe_with_default("resultDescription", query_desc, "Not available."), 
                     nodes[0], nodes[-1:][0], api_sec_props, viewer_link),
         rule_id = rule_id_key,
+        level=RunFactory.translate_severity_to_level(SastRun.get_value_safe('severity', result)),
         locations=[cur_loop_loc] if cur_loop_loc is not None else None,
         hosted_viewer_uri=viewer_link,
         partial_fingerprints={
