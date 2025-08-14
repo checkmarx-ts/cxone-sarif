@@ -12,6 +12,13 @@ from cxone_api.low.scans import retrieve_scan_details
 from jsonpath_ng import parse
 from typing import Dict, List, Any
 import logging, asyncio
+from jschema_to_python.to_json import to_json
+
+class SerializableSarifLog(SarifLog):
+
+  def asjson(self):
+    return to_json(self)
+
 
 class RunFailures(Exception):
 
@@ -38,7 +45,8 @@ PLATFORM_NAME="CheckmarxOne"
     A SarifLog element containing scan results for any engines executed during the scan.
 
 """
-async def get_sarif_v210_log_for_scan(client : CxOneClient, opts : ReportOpts, scan_id : str, throw_on_run_failure=False) -> SarifLog:
+async def get_sarif_v210_log_for_scan(client : CxOneClient, opts : ReportOpts, scan_id : str, throw_on_run_failure=False,
+                                      clone_url : str = None, branch : str = None) -> SerializableSarifLog:
 
   def version_control_details_factory(scan_details : Dict) -> VersionControlDetails:
     __handler_type = parse("$.metadata.type")
@@ -54,8 +62,8 @@ async def get_sarif_v210_log_for_scan(client : CxOneClient, opts : ReportOpts, s
       repo_url = "uri:unknown"
 
     return VersionControlDetails(
-      repository_uri = repo_url,
-      branch = scan_details['branch'],
+      repository_uri = clone_url if clone_url is not None else repo_url,
+      branch = branch if branch is not None else scan_details.get('branch', "unknown"),
       as_of_time_utc = scan_details['createdAt'],
       properties = {
         "sourceType" : scan_details['sourceType'],
@@ -131,7 +139,7 @@ async def get_sarif_v210_log_for_scan(client : CxOneClient, opts : ReportOpts, s
         _log.debug("----- END: ERROR {counter} -----")
         counter += 1
 
-    return SarifLog(runs = [x for x in results if isinstance(x, Run)], 
+    return SerializableSarifLog(runs = [x for x in results if isinstance(x, Run)], 
                 version="2.1.0", 
                 schema_uri="https://docs.oasis-open.org/sarif/sarif/v2.1.0/cs01/schemas/sarif-external-property-file-schema-2.1.0.json",
                 properties=

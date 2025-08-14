@@ -10,8 +10,6 @@ from cxone_sarif import get_sarif_v210_log_for_scan
 from cxone_sarif.opts import ReportOpts, SastOpts
 from cxone_sarif.__agent__ import __agent__
 from cxone_sarif.__version__ import __version__
-from jschema_to_python.to_json import to_json
-
 
 DEFAULT_LOGLEVEL="INFO"
 
@@ -161,7 +159,7 @@ async def execute_on_scanid(client : cx.CxOneClient,
       sarif_log = await get_sarif_v210_log_for_scan(client, opts, scan_id, True)
       
       async with aiofiles.open(Path(outdir) / f"{scan_id}.sarif", "wt") as fp:
-        await fp.write(to_json(sarif_log))
+        await fp.write(sarif_log.asjson())
         await fp.flush()
       
       return 0
