@@ -1,5 +1,11 @@
 # Release Notes
 
+## 1.0.4
+
+* Changes to the `get_sarif_v210_log_for_scan` entrypoint method for the module.
+  * Returned `SarifLog` object is a subclass that has a `asjson()` method that serializes the log into JSON.
+  * Optional parameters `clone_url` and `branch` will take precedence over values found in the scan information.
+
 ## 1.0.3
 
 * A few bug fixes related to interpreting missing JSON fields for some SAST results.
