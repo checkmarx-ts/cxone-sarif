@@ -16,7 +16,7 @@ DEFAULT_LOGLEVEL="INFO"
 async def main():
   """Usage: cxone-sarif [-h | --help | -v | --version] --tenant TENANT (--region REGION | (--url URL --iam-url IAMURL)) 
                    (--api-key APIKEY | (--client OCLIENT --secret OSECRET) | --use-env-oauth | --use-env-api-key) 
-                   [--level LOGLEVEL] [--log-file LOGFILE] [--timeout TIMEOUT] [--retries RETRIES] [--proxy IP:PORT] 
+                   [--level LOGLEVEL] [--log-file LOGFILE] [--timeout TIMEOUT] [--delay DELAY] [--retries RETRIES] [--proxy IP:PORT] 
                    [--outdir OUTDIR] [--no-sast] [--no-sast-apisec] [--no-sca] [--no-kics] [--no-containers] [-qk] [-t THREADS] SCANIDS... 
 
   SCANIDS...          One or more space-separated scan ids that will each generate a file containing a SARIF log.
@@ -49,11 +49,13 @@ async def main():
   CheckmarxOne API Options
   --timeout TIMEOUT   The timeout, in seconds, for API operations.  [default: 60]
 
-  --retries RETRIES   The number of operation retries on failure.   [default: 3]
+  --retries RETRIES   The number of API call retries on failure.   [default: 3]
+
+  --delay DELAY       The maximum seconds to delay between retries for API call failures. [default: 15]
 
   -k                  Ignore SSL verification failures. 
 
-  --proxy URL     A proxy server to use for communication.
+  --proxy HOST_PORT   A value in the form of HOST:PORT that is used as a proxy server.
 
   
   SARIF Log Generation Options:
@@ -180,7 +182,12 @@ def cxone_client_factory(args : Dict, auth_endpoint : cx.CxOneAuthEndpoint, api_
         raise Exception("Environment variable CX_APIKEY is not defined.")
 
       return cx.CxOneClient.create_with_api_key(key, f"{__agent__}/{__version__}", auth_endpoint,
-                                                  api_endpoint, int(args['--timeout']), int(args['--retries']), proxy, not (args['-k']))
+                                                  api_endpoint,
+                                                timeout=int(args['--timeout']), 
+                                                retries=int(args['--retries']), 
+                                                retry_delay_s=int(args['--delay']), 
+                                                proxy=proxy, 
+                                                ssl_verify=not (args['-k']))
 
     elif (args['--client'] is not None and args['--secret'] is not None) or args['--use-env-oauth']:
 
@@ -194,8 +201,12 @@ def cxone_client_factory(args : Dict, auth_endpoint : cx.CxOneAuthEndpoint, api_
         raise Exception("One or both environment variables CX_OCLIENT and CX_OSECRET are not defined.")
 
       return cx.CxOneClient.create_with_oauth(client, secret, f"{__agent__}/{__version__}", auth_endpoint,
-                                                api_endpoint, int(args['--timeout']), int(args['--retries']), proxy, not (args['-k']))
-
+                                                api_endpoint, 
+                                                timeout=int(args['--timeout']), 
+                                                retries=int(args['--retries']), 
+                                                retry_delay_s=int(args['--delay']), 
+                                                proxy=proxy, 
+                                                ssl_verify=not (args['-k']))
 if __name__ == "__main__":
   asyncio.run(main())
 
