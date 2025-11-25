@@ -76,6 +76,8 @@ def create_parser():
                        help="Suppress static code analysis scan results.")
     parser.add_argument("--no-sast-apisec", action="store_true",
                        help="Do not augment SAST results with API security scan results.")
+    parser.add_argument("--sast-append-similarity-id", action="store_true",
+                       help="Append similarity ID to SAST result messages (max 256 chars total).")
     parser.add_argument("--no-sca", action="store_true",
                        help="Suppress software composition analysis scan results.")
     parser.add_argument("--no-kics", action="store_true",
@@ -197,6 +199,7 @@ async def main():
                             SastOpts=SastOpts(
                                 SkipSast=args.no_sast,
                                 OmitApiResults=args.no_sast_apisec,
+                                AppendSimilarityId=args.sast_append_similarity_id,
                             ),
                             SkipSca=args.no_sca,
                             SkipKics=args.no_kics,

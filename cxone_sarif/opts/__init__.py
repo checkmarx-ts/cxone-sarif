@@ -5,6 +5,7 @@ from dataclasses import dataclass
 class SastOpts:
     SkipSast: bool
     OmitApiResults: bool
+    AppendSimilarityId: bool
 
 
 @dataclass(frozen=True)
@@ -16,7 +17,7 @@ class ReportOpts:
 
 
 DEFAULT = ReportOpts(
-    SastOpts=SastOpts(SkipSast=False, OmitApiResults=False),
+    SastOpts=SastOpts(SkipSast=False, OmitApiResults=False, AppendSimilarityId=False),
     SkipSca=False,
     SkipKics=False,
     SkipContainers=False,
