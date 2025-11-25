@@ -33,13 +33,44 @@ pip install https://github.com/checkmarx-ts/cxone-sarif/releases/download/X.X.X/
 The `__main__.py` file is a good example of using the `cxone_sarif` module.  The basics:
 
 ```Python
+import asyncio
+import json
+import os
 import cxone_api as cx
 from cxone_sarif import get_sarif_v210_log_for_scan
 from cxone_sarif.opts import DEFAULT
 
-# Create an instance of the cxone-async-api client
-client = cx.CxOneClient.create_with_XXXX(...)
-sarif_log = await get_sarif_v210_log_for_scan(client, DEFAULT, "<scan id>")
+async def main():
+    # Required attributes from CxOne to export the scan sarif file
+    CXONE_API_TOKEN = ""
+    CXONE_TENANT = ""
+    CXONE_REGION = ""
+    SCAN_ID = ""
+
+    # Use the regional endpoint classes from cxone_api
+    # For US2 region, use ApiUS2 and AuthUS2
+    api_endpoint = cx.ApiRegionEndpoints[CXONE_REGION]()
+    tenant_auth_endpoint = cx.AuthRegionEndpoints[CXONE_REGION](CXONE_TENANT)
+
+    client = cx.CxOneClient.create_with_api_key(
+        api_key=CXONE_API_TOKEN,
+        api_endpoint=api_endpoint,
+        tenant_auth_endpoint=tenant_auth_endpoint,
+        agent_name="lightholder",
+    )
+
+    sarif_log = await get_sarif_v210_log_for_scan(client, DEFAULT, scan_id=SCAN_ID)
+
+    # Write SARIF log to file in current working directory
+    output_file = os.path.join(os.getcwd(), f"checkmarx-{SCAN_ID}.sarif")
+    with open(output_file, 'w') as f:
+        f.write(sarif_log.asjson())
+
+    print(f"SARIF log written to: {output_file}")
+    return sarif_log
+
+if __name__ == '__main__':
+    asyncio.run(main())
 ```
 
 ## Using the Command Line
