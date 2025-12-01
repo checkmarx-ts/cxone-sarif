@@ -28,6 +28,12 @@ The module can be installed manually the URL for the install `.whl` file from th
 pip install https://github.com/checkmarx-ts/cxone-sarif/releases/download/X.X.X/cxone_sarif-X.X.X-py3-none-any.whl
 ```
 
+For command-line usage, install with the `[cli]` extra to include the required `docopt` dependency:
+
+```Bash
+pip install https://github.com/checkmarx-ts/cxone-sarif/releases/download/X.X.X/cxone_sarif-X.X.X-py3-none-any.whl[cli]
+```
+
 ## Using the API
 
 The `__main__.py` file is a good example of using the `cxone_sarif` module.  The basics:
@@ -98,6 +104,8 @@ Usage: cxone-sarif [-h | --help | -v | --version] --tenant TENANT (--region REGI
   SARIF Log Generation Options:
   --no-sast           Suppress static code analysis scan results.
   --no-sast-apisec    Do not augment SAST results with API security scan results.
+  --sast-append-similarity-id    Append similarity ID to SAST result messages (max 256 chars total).
+                      This option is disabled by default.
 
   --no-sca            Suppress software composition analysis scan results.
   

@@ -143,7 +143,7 @@ class SastRun(RunFactory):
       
     # Handle similarity ID appending
     if append_similarity_id and similarity_id is not None:
-      similarity_suffix = f" ID:{similarity_id}"
+      similarity_suffix = f" SIMID:{similarity_id}"
       max_length = 256
       
       # For text field
