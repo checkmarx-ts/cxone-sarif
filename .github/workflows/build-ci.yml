@@ -16,18 +16,26 @@ on:
 
 jobs:
 
-  execute-pylint-and-integration-testing:
-    runs-on: ubuntu-latest
+  execute-pylint-and-integration-tests-x64:
+    runs-on: ${{ matrix.os }}
     strategy:
       max-parallel: 2
       matrix:
+        os:
+          - ubuntu-slim
+          - ubuntu-latest
+          - windows-latest
+        img:
+          - python
+          - public.ecr.aws/lambda/python
         pver:
           - "3.9"
           - "3.10"
           - "3.11"
           - "3.12"
           - "3.13"
-    container: python:${{ matrix.pver }}
+          - "3.14"
+    container: ${{ matrix.img }}:${{ matrix.pver }}
     env:
       CXONE_TENANT: ${{ secrets.CXONE_TENANT }}
       CXONE_CLIENT_ID: ${{ secrets.CXONE_CLIENT_ID }}
@@ -42,8 +50,18 @@ jobs:
           pip install virtualenv
           virtualenv .venv
           . .venv/bin/activate
+
+      - name: Install packages for integration testing only
+        shell: bash
+        run: |
+          pip install .[cli]
+
+      - name: Integration Test
+        shell: bash
+        run: |
+          python integration_tests/execute.py
           
-      - name: Install packages
+      - name: Install packages for pylint
         shell: bash
         run: |
           pip install pylint
@@ -54,10 +72,6 @@ jobs:
         run: |
           pylint --disable=all --enable=E,F --disable=E1121 --score=false cxone_sarif
 
-      - name: Integration Test
-        shell: bash
-        run: |
-          python integration_tests/execute.py
   
 
   call-package-build:
