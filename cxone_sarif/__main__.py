@@ -66,6 +66,7 @@ async def main():
     SARIF Log Generation Options:
     --no-sast           Suppress static code analysis scan results.
     --no-sast-apisec    Do not augment SAST results with API security scan results.
+    --sast-append-similarity-id    Append similarity ID to SAST result messages (max 256 chars total).
 
     --no-sca            Suppress software composition analysis scan results.
 
@@ -144,6 +145,7 @@ async def main():
                             SastOpts=SastOpts(
                                 SkipSast=args["--no-sast"],
                                 OmitApiResults=args["--no-sast-apisec"],
+                                AppendSimilarityId=args["--sast-append-similarity-id"],
                             ),
                             SkipSca=args["--no-sca"],
                             SkipKics=args["--no-kics"],
