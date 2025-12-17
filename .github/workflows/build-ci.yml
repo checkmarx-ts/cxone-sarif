@@ -43,21 +43,26 @@ jobs:
           virtualenv .venv
           . .venv/bin/activate
 
-      - name: Install packages for integration testing only
+      - name: Install packages for module integration testing
         shell: bash
         run: |
           pip install .
 
-      - name: Integration Test
+      - name: Module Integration Test
         shell: bash
         run: |
-          python integration_tests/execute.py
-          
-      - name: Install packages for pylint
+          python integration_tests/module.py
+
+      - name: Install packages for pylint and CLI testing
         shell: bash
         run: |
           pip install pylint
           pip install .[cli]
+
+      - name: CLI Integration Test
+        shell: bash
+        run: |
+          python integration_tests/cli.py
 
       - name: Pylint
         shell: bash
