@@ -15,18 +15,59 @@ on:
   push:
 
 jobs:
-
-  execute-pylint-and-integration-tests-x64:
-    runs-on: ${{ matrix.os }}
+  execute-pylint-and-integration-tests-x64-aws:
+    runs-on: ubuntu-latest
     strategy:
       max-parallel: 2
       matrix:
-        os:
-          - ubuntu-latest
-          - windows-latest
-        img:
-          - python
-          - public.ecr.aws/lambda/python
+        pver:
+          - "3.10"
+          - "3.11"
+          - "3.12"
+          - "3.13"
+          - "3.14"
+    container: public.ecr.aws/lambda/python:${{ matrix.pver }}
+    env:
+      CXONE_TENANT: ${{ secrets.CXONE_TENANT }}
+      CXONE_CLIENT_ID: ${{ secrets.CXONE_CLIENT_ID }}
+      CXONE_CLIENT_SECRET: ${{ secrets.CXONE_CLIENT_SECRET }}
+    steps:
+      - name: Fetch Code
+        uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b
+
+      - name: Make virtual environment
+        shell: bash
+        run: |
+          pip install virtualenv
+          virtualenv .venv
+          . .venv/bin/activate
+
+      - name: Install packages for integration testing only
+        shell: bash
+        run: |
+          pip install .[cli]
+
+      - name: Integration Test
+        shell: bash
+        run: |
+          python integration_tests/execute.py
+          
+      - name: Install packages for pylint
+        shell: bash
+        run: |
+          pip install pylint
+          pip install .[cli]
+
+      - name: Pylint
+        shell: bash
+        run: |
+          pylint --disable=all --enable=E,F --disable=E1121 --score=false cxone_sarif
+
+  execute-pylint-and-integration-tests-x64-python:
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 2
+      matrix:
         pver:
           - "3.9"
           - "3.10"
@@ -34,7 +75,7 @@ jobs:
           - "3.12"
           - "3.13"
           - "3.14"
-    container: ${{ matrix.img }}:${{ matrix.pver }}
+    container: python:${{ matrix.pver }}
     env:
       CXONE_TENANT: ${{ secrets.CXONE_TENANT }}
       CXONE_CLIENT_ID: ${{ secrets.CXONE_CLIENT_ID }}
