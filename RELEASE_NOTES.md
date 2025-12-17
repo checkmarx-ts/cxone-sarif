@@ -1,5 +1,10 @@
 # Release Notes
 
+## 1.1.1
+
+* Added an option to include the SAST result similarity id in the text description.
+* Added the result viewer URL for the non-markdown text result description per SARIF &sect;3.11.6
+
 ## 1.0.4
 
 * Changes to the `get_sarif_v210_log_for_scan` entrypoint method for the module.

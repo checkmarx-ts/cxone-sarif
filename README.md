@@ -28,7 +28,8 @@ The module can be installed manually the URL for the install `.whl` file from th
 pip install https://github.com/checkmarx-ts/cxone-sarif/releases/download/X.X.X/cxone_sarif-X.X.X-py3-none-any.whl
 ```
 
-For command-line usage, install with the `[cli]` extra to include the required `docopt` dependency:
+Previous versions had the CLI interface installed by default.  Going forward, installing with the `[cli]` extra is required to use the CLI interface.  This
+can be done like:
 
 ```Bash
 pip install https://github.com/checkmarx-ts/cxone-sarif/releases/download/X.X.X/cxone_sarif-X.X.X-py3-none-any.whl[cli]
@@ -62,8 +63,9 @@ This help documentation is displayed:
 Usage: cxone-sarif [-h | --help | -v | --version] --tenant TENANT (--region REGION | (--url URL --iam-url IAMURL)) 
                    (--api-key APIKEY | (--client OCLIENT --secret OSECRET) | --use-env-oauth | --use-env-api-key) 
                    [--level LOGLEVEL] [--log-file LOGFILE] [--timeout TIMEOUT] [--retries RETRIES] [--proxy IP:PORT] 
-                   [--outdir OUTDIR] [--no-sast] [--no-sast-apisec] [--no-sca] [--no-kics] [--no-containers] [-qk] [-t THREADS] SCANIDS... 
-
+                   [--outdir OUTDIR] [--no-sast] [--no-sast-apisec] [--no-sca] [--no-kics] [--no-containers]
+                   [--with-sast-simid] [-qk] [-t THREADS] SCANIDS...
+                   
   SCANIDS...          One or more space-separated scan ids that will each generate a file containing a SARIF log.
 
   -h --help           Show this help.
@@ -119,6 +121,9 @@ Usage: cxone-sarif [-h | --help | -v | --version] --tenant TENANT (--region REGI
                       Keep at 2 when using with multi-tenant Checkmarx One for
                       best stability.  The maximum is 8.
 
+  SAST Options:
+    --with-sast-simid   Append similarity ID to SAST result descriptions. [default: false]
+
   Logging Output Options:
   --level LOGLEVEL    Log level [default: INFO]
                       Use: DEBUG, INFO, WARNING, ERROR, CRITICAL
@@ -149,6 +154,7 @@ The CLI emits shell exit codes on completion:
 |-|-|
 |0|Successful completion|
 |1|General failure with no SARIF logs generated|
+|2|The [cli] extra is not installed|
 |100|Partial failure with one or more SARIF logs failing to complete|
 
 When a SARIF log fails, the details are emitted in the log.  The scan id for each
