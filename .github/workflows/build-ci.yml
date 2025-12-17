@@ -46,7 +46,8 @@ jobs:
       - name: Install packages
         shell: bash
         run: |
-          pip install . pylint
+          pip install pylint
+          pip install .[cli]
 
       - name: Pylint
         shell: bash
