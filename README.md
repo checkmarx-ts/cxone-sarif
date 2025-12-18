@@ -32,7 +32,7 @@ Previous versions had the CLI interface installed by default.  Going forward, in
 can be done like:
 
 ```Bash
-pip install https://github.com/checkmarx-ts/cxone-sarif/releases/download/X.X.X/cxone_sarif-X.X.X-py3-none-any.whl[cli]
+pip install "cxone_sarif[cli]@https://github.com/checkmarx-ts/cxone-sarif/releases/download/X.X.X/cxone_sarif-X.X.X-py3-none-any.whl"
 ```
 
 ## Using the API
