@@ -28,19 +28,24 @@ The module can be installed manually the URL for the install `.whl` file from th
 pip install https://github.com/checkmarx-ts/cxone-sarif/releases/download/X.X.X/cxone_sarif-X.X.X-py3-none-any.whl
 ```
 
+Previous versions had the CLI interface installed by default.  Going forward, installing with the `[cli]` extra is required to use the CLI interface.  This
+can be done like:
+
+```Bash
+pip install "cxone_sarif[cli]@https://github.com/checkmarx-ts/cxone-sarif/releases/download/X.X.X/cxone_sarif-X.X.X-py3-none-any.whl"
+```
+
 ## Using the API
 
-The `__main__.py` file is a good example of using the `cxone_sarif` module.  The basics:
+A [Jupyter Notebook tutorial](tutorial/cxone-sarif-tutorial.ipynb) has been provided to demonstrate
+how to use the `cxone-sarif` API.  The tutorial can be run interactively or referenced for example code.
 
-```Python
-import cxone_api as cx
-from cxone_sarif import get_sarif_v210_log_for_scan
-from cxone_sarif.opts import DEFAULT
+The Jupyter Notebook tutorial can be executed in Visual Studio Code or using a Jupyter server instance.  Use
+of VSCode is recommended; attempting to execute the notebook in VSCode will prompt to install required extentions
+and Python modules.
 
-# Create an instance of the cxone-async-api client
-client = cx.CxOneClient.create_with_XXXX(...)
-sarif_log = await get_sarif_v210_log_for_scan(client, DEFAULT, "<scan id>")
-```
+For best results, create a Python virtual environment before attempting to execute the
+tutorial.
 
 ## Using the Command Line
 
@@ -56,8 +61,9 @@ This help documentation is displayed:
 Usage: cxone-sarif [-h | --help | -v | --version] --tenant TENANT (--region REGION | (--url URL --iam-url IAMURL)) 
                    (--api-key APIKEY | (--client OCLIENT --secret OSECRET) | --use-env-oauth | --use-env-api-key) 
                    [--level LOGLEVEL] [--log-file LOGFILE] [--timeout TIMEOUT] [--retries RETRIES] [--proxy IP:PORT] 
-                   [--outdir OUTDIR] [--no-sast] [--no-sast-apisec] [--no-sca] [--no-kics] [--no-containers] [-qk] [-t THREADS] SCANIDS... 
-
+                   [--outdir OUTDIR] [--no-sast] [--no-sast-apisec] [--no-sca] [--no-kics] [--no-containers]
+                   [--with-sast-simid] [-qk] [-t THREADS] SCANIDS...
+                   
   SCANIDS...          One or more space-separated scan ids that will each generate a file containing a SARIF log.
 
   -h --help           Show this help.
@@ -111,6 +117,9 @@ Usage: cxone-sarif [-h | --help | -v | --version] --tenant TENANT (--region REGI
                       Keep at 2 when using with multi-tenant Checkmarx One for
                       best stability.  The maximum is 8.
 
+  SAST Options:
+    --with-sast-simid   Append similarity ID to SAST result descriptions. [default: false]
+
   Logging Output Options:
   --level LOGLEVEL    Log level [default: INFO]
                       Use: DEBUG, INFO, WARNING, ERROR, CRITICAL
@@ -141,6 +150,7 @@ The CLI emits shell exit codes on completion:
 |-|-|
 |0|Successful completion|
 |1|General failure with no SARIF logs generated|
+|2|The [cli] extra is not installed|
 |100|Partial failure with one or more SARIF logs failing to complete|
 
 When a SARIF log fails, the details are emitted in the log.  The scan id for each

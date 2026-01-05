@@ -1,4 +1,4 @@
-from typing import Dict, List, Any
+from typing import Dict, List, Union
 from cxone_api import CxOneClient
 from cxone_api.util import json_on_ok, page_generator
 from sarif_om import (Run, 
@@ -99,7 +99,7 @@ class SastRun(RunFactory):
     return response
   
   @staticmethod
-  def __make_description(description : str, source_node : Dict, sink_node : Dict, apisec_results : List[ApiSecResult], viewer_link : str) -> Message:
+  def __make_description(description : str, source_node : Dict, sink_node : Dict, apisec_results : List[ApiSecResult], viewer_link : str, similarity_id : Union[str,None]) -> Message:
     text = markdown = description
 
     def get_or_unknown(node, key):
@@ -132,6 +132,7 @@ class SastRun(RunFactory):
 
       if viewer_link is not None:
         markdown += f" [View in CheckmarxOne]({viewer_link})"
+        text += f"\n[View in CheckmarxOne]{{{viewer_link}}}"
 
       if apisec_results is not None:
         text += "\n\nAPI Endpoints:\n"
@@ -141,6 +142,11 @@ class SastRun(RunFactory):
           text += f"{ares.http_method} {ares.endpoint_path}\n"
           markdown += f"* {ares.http_method} {ares.endpoint_path}\n"
       
+    # Handle similarity ID appending
+    if similarity_id is not None:
+      similarity_suffix = f"\nSIMID:{similarity_id}\n"
+      text += similarity_suffix
+      markdown += similarity_suffix
 
     return Message(text=text, markdown=markdown)
 
@@ -178,7 +184,7 @@ class SastRun(RunFactory):
     return index
   
   @staticmethod
-  async def factory(client : CxOneClient, omit_apisec : bool, project_id : str, scan_id : str, 
+  async def factory(client : CxOneClient, omit_apisec : bool, append_similarity_id : bool, project_id : str, scan_id : str, 
                     platform : str, version : str, organization : str, info_uri : str) -> Run:
 
 
@@ -305,7 +311,8 @@ class SastRun(RunFactory):
 
       results.append(Result(
         message = SastRun.__make_description(RunFactory.get_value_safe_with_default("resultDescription", query_desc, "Not available."), 
-                    nodes[0], nodes[-1:][0], api_sec_props, viewer_link),
+                    nodes[0], nodes[-1:][0], api_sec_props, viewer_link, 
+                    str(result['similarityID']) if append_similarity_id else None),
         rule_id = rule_id_key,
         level=RunFactory.translate_severity_to_level(SastRun.get_value_safe('severity', result)),
         locations=[cur_loop_loc] if cur_loop_loc is not None else None,

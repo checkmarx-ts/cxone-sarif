@@ -6,8 +6,7 @@ from typing import Dict
 from asyncio import Semaphore
 from pathlib import Path
 import aiofiles
-from docopt import docopt
-from docopt import DocoptExit
+import importlib
 import cxone_api as cx
 from cxone_sarif.log import bootstrap
 from cxone_sarif import get_sarif_v210_log_for_scan
@@ -22,7 +21,8 @@ async def main():
     """Usage: cxone-sarif [-h | --help | -v | --version] --tenant TENANT (--region REGION | (--url URL --iam-url IAMURL))
                      (--api-key APIKEY | (--client OCLIENT --secret OSECRET) | --use-env-oauth | --use-env-api-key)
                      [--level LOGLEVEL] [--log-file LOGFILE] [--timeout TIMEOUT] [--delay DELAY] [--retries RETRIES] [--proxy IP:PORT]
-                     [--outdir OUTDIR] [--no-sast] [--no-sast-apisec] [--no-sca] [--no-kics] [--no-containers] [-qk] [-t THREADS] SCANIDS...
+                     [--outdir OUTDIR] [--no-sast] [--no-sast-apisec] [--no-sca] [--no-kics] [--no-containers]
+                     [--with-sast-simid] [-qk] [-t THREADS] SCANIDS...
 
     SCANIDS...          One or more space-separated scan ids that will each generate a file containing a SARIF log.
 
@@ -67,6 +67,7 @@ async def main():
     --no-sast           Suppress static code analysis scan results.
     --no-sast-apisec    Do not augment SAST results with API security scan results.
 
+
     --no-sca            Suppress software composition analysis scan results.
 
     --no-kics           Suppress infrastructure as code scan results.
@@ -79,6 +80,9 @@ async def main():
                         Keep at 2 when using with multi-tenant Checkmarx One for
                         best stability.  The maximum is 8.
 
+    SAST Options:
+    --with-sast-simid   Append similarity ID to SAST result descriptions. [default: false]
+
     Logging Output Options:
     --level LOGLEVEL    Log level [default: INFO]
                         Use: DEBUG, INFO, WARNING, ERROR, CRITICAL
@@ -90,6 +94,11 @@ async def main():
     """
 
     try:
+        # The docopt module may not be installed unless the [cli] extra is installed
+        # so load it dynamically when executing as a script.
+        docopt_lib = importlib.import_module("docopt")
+        docopt = docopt_lib.docopt
+
         args = docopt(
             main.__doc__.replace("{CXREGIONS}", ",".join(cx.ApiRegionEndpoints.keys())),
             version=f"cxone-sarif {__version__}",
@@ -144,6 +153,7 @@ async def main():
                             SastOpts=SastOpts(
                                 SkipSast=args["--no-sast"],
                                 OmitApiResults=args["--no-sast-apisec"],
+                                AppendSimilarityId=args["--with-sast-simid"],
                             ),
                             SkipSca=args["--no-sca"],
                             SkipKics=args["--no-kics"],
@@ -157,7 +167,10 @@ async def main():
         )
 
         exit(max([x.result() for x in task_result]))
-    except DocoptExit as bad_args:
+    except ModuleNotFoundError:
+        print("The CLI interface is not operational since it appears [cli] extra is not installed.")
+        exit(2)
+    except docopt_lib.DocoptExit as bad_args:
         print("Incorrect arguments provided.")
         print(bad_args)
         exit(1)

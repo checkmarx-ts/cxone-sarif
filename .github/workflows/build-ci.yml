@@ -15,8 +15,7 @@ on:
   push:
 
 jobs:
-
-  execute-pylint-and-integration-testing:
+  execute-pylint-and-integration-tests:
     runs-on: ubuntu-latest
     strategy:
       max-parallel: 2
@@ -27,6 +26,7 @@ jobs:
           - "3.11"
           - "3.12"
           - "3.13"
+          - "3.14"
     container: python:${{ matrix.pver }}
     env:
       CXONE_TENANT: ${{ secrets.CXONE_TENANT }}
@@ -42,21 +42,33 @@ jobs:
           pip install virtualenv
           virtualenv .venv
           . .venv/bin/activate
-          
-      - name: Install packages
+
+      - name: Install packages for module integration testing
         shell: bash
         run: |
-          pip install . pylint
+          pip install .
+
+      - name: Module Integration Test
+        shell: bash
+        run: |
+          python integration_tests/module.py
+
+      - name: Install packages for pylint and CLI testing
+        shell: bash
+        run: |
+          pip install pylint
+          pip install .[cli]
+
+      - name: CLI Integration Test
+        shell: bash
+        run: |
+          python integration_tests/cli.py
 
       - name: Pylint
         shell: bash
         run: |
           pylint --disable=all --enable=E,F --disable=E1121 --score=false cxone_sarif
 
-      - name: Integration Test
-        shell: bash
-        run: |
-          python integration_tests/execute.py
   
 
   call-package-build:
