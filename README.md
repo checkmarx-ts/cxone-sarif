@@ -37,17 +37,8 @@ pip install "cxone_sarif[cli]@https://github.com/checkmarx-ts/cxone-sarif/releas
 
 ## Using the API
 
-The `__main__.py` file is a good example of using the `cxone_sarif` module.  The basics:
-
-```Python
-import cxone_api as cx
-from cxone_sarif import get_sarif_v210_log_for_scan
-from cxone_sarif.opts import DEFAULT
-
-# Create an instance of the cxone-async-api client
-client = cx.CxOneClient.create_with_XXXX(...)
-sarif_log = await get_sarif_v210_log_for_scan(client, DEFAULT, "<scan id>")
-```
+A [Jupyter Notebook tutorial](tutorial/cxone-sarif-tutorial.ipynb) has been provided to demonstrate
+how to use the `cxone-sarif` API.  The tutorial can be run interactively or referenced for example code.
 
 ## Using the Command Line
 
@@ -106,8 +97,6 @@ Usage: cxone-sarif [-h | --help | -v | --version] --tenant TENANT (--region REGI
   SARIF Log Generation Options:
   --no-sast           Suppress static code analysis scan results.
   --no-sast-apisec    Do not augment SAST results with API security scan results.
-  --sast-append-similarity-id    Append similarity ID to SAST result messages (max 256 chars total).
-                      This option is disabled by default.
 
   --no-sca            Suppress software composition analysis scan results.
   
