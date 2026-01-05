@@ -35,20 +35,6 @@ class RunFailures(Exception):
 
 PLATFORM_NAME = "CheckmarxOne"
 
-"""
-  Maps a Checkmarx One improved JSON report to Sarif v2.1.0
-
-  Args:
-    client - A CxOneClient class instance from the cxone-async-api
-    opts - Report generation options
-    scan_id - A GUID string representing a scan id in CheckmarxOne
-    throw_on_run_failure - Set to true to throw RunFailures if any run generations fail.  Default: False
-
-  Returns:
-    A SarifLog element containing scan results for any engines executed during the scan.
-
-"""
-
 
 async def get_sarif_v210_log_for_scan(
     client: CxOneClient,
@@ -58,6 +44,32 @@ async def get_sarif_v210_log_for_scan(
     clone_url: str = None,
     branch: str = None,
 ) -> SerializableSarifLog:
+    """Generate a SARIF v2.1.0 log from CheckmarxOne scan results.
+
+    :param client: A CxOneClient class instance from the cxone-async-api.
+    :type client: CxOneClient
+
+    :param opts: Report generation options.
+    :type opts: ReportOpts
+
+    :param scan_id: A GUID string representing a scan id in CheckmarxOne.
+    :type scan_id: str
+
+    :param throw_on_run_failure: Set to true to throw RunFailures if any run generations fail.  Default: False
+    :type throw_on_run_failure: bool, optional
+
+    :param clone_url: The clone URL to be used if it can't be retrieved from the Checkmarx One project.  This is used when
+    generating the log and may provide useful display context by the log consumer.  The URL "uri:unknown" is used if
+    a clone URL can't be determined.
+    :type clone_url: str, optional
+
+    :param branch: The name of the branch to use if it can't be retrieved from the Checkmarx One scan.  This is used when
+    generating the log and may provide useful display context by the log consumer.  The value "unknown" is used if
+    a suitable value can't be determined.
+    :type branch: str, optional
+
+    :rtype: SerializableSarifLog
+    """
 
     def version_control_details_factory(scan_details: Dict) -> VersionControlDetails:
         __handler_type = parse("$.metadata.type")
