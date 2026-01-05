@@ -40,6 +40,13 @@ pip install "cxone_sarif[cli]@https://github.com/checkmarx-ts/cxone-sarif/releas
 A [Jupyter Notebook tutorial](tutorial/cxone-sarif-tutorial.ipynb) has been provided to demonstrate
 how to use the `cxone-sarif` API.  The tutorial can be run interactively or referenced for example code.
 
+The Jupyter Notebook tutorial can be executed in Visual Studio Code or using a Jupyter server instance.  Use
+of VSCode is recommended; attempting to execute the notebook in VSCode will prompt to install required extentions
+and Python modules.
+
+For best results, create a Python virtual environment before attempting to execute the
+tutorial.
+
 ## Using the Command Line
 
 Execute the `cxone-sarif` CLI to display the help:
