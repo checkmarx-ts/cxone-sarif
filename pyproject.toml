@@ -11,7 +11,7 @@ dependencies = [
     "jschema-to-python==1.2.3",
     "dataclasses-json==0.6.7",
     "aiofiles==24.1.0",
-    "cxone-api@https://github.com/checkmarx-ts/cxone-async-api/releases/download/1.1.1/cxone_api-1.1.1-py3-none-any.whl"
+    "cxone-api@https://github.com/checkmarx-ts/cxone-async-api/releases/download/1.1.2/cxone_api-1.1.2-py3-none-any.whl"
 ]
 
 description = "CheckmarxOne Sarif Transformation API"
