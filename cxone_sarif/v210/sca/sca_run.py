@@ -2,7 +2,7 @@ from cxone_sarif.utils import normalize_file_uri
 from cxone_sarif.run_factory import RunFactory
 from cxone_api import CxOneClient
 from cxone_api.util import json_on_ok
-from cxone_api.high.sca import get_sca_report, ScaReportOptions, ScaReportType
+from cxone_api.high.sca import get_sca_report, ScaReportOptions, ScaReportType, ScaTenantPackages
 from typing import Dict, List, Tuple
 from pathlib import Path
 import urllib
@@ -181,15 +181,22 @@ class ScaRun(RunFactory):
 
     packages = ScaRun.get_value_safe("Packages", scan_report)
     package_loc_index = {}
-    package_dep_type_index = {}
 
     for package in packages:
-      pkg_id = ScaRun.get_value_safe("Id", package)
-      package_loc_index[pkg_id] = ScaRun.get_value_safe("Locations", package)
-      package_dep_type_index[pkg_id] = {
-        "isDevDependency" : ScaRun.get_value_safe("IsDevDependency", package),
-        "isTest" : ScaRun.get_value_safe("IsTest", package),
-      }
+      package_loc_index[ScaRun.get_value_safe("Id", package)] = ScaRun.get_value_safe("Locations", package)
+
+    # isDevDependency and isTest are not present in the ScanReportJson package data;
+    # they must be retrieved via the ScaTenantPackages GQL API filtered by scanId.
+    package_dep_type_index = {}
+    tenant_pkgs = ScaTenantPackages(client)
+    tenant_pkgs.where = {"scanId" : {"eq" : scan_id}}
+    async for pkg in tenant_pkgs:
+      pkg_id = pkg.get("packageId")
+      if pkg_id:
+        package_dep_type_index[pkg_id] = {
+          "isDevDependency" : pkg.get("isDevDependency", False),
+          "isTest" : pkg.get("isTest", False),
+        }
 
     results, rules = ScaRun.__get_vulnerabilities(client, ScaRun.get_value_safe("Vulnerabilities", scan_report), package_loc_index, package_dep_type_index, project_id, scan_id)
 
