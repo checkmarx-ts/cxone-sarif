@@ -47,7 +47,7 @@ class ScaRun(RunFactory):
 
 
   @staticmethod
-  def __get_vulnerabilities(client : CxOneClient, vulnerabilities : List[Dict], location_index : Dict[str, List[str]], project_id : str, scan_id : str) -> Tuple[List[Result], Dict[str, str]]:
+  def __get_vulnerabilities(client : CxOneClient, vulnerabilities : List[Dict], location_index : Dict[str, List[str]], dep_type_index : Dict[str, Dict], project_id : str, scan_id : str) -> Tuple[List[Result], Dict[str, str]]:
 
     results = []
     rules = {}
@@ -167,6 +167,8 @@ class ScaRun(RunFactory):
           "firstFoundAt" : ScaRun.get_value_safe("FirstFoundAt", vuln),
           "riskType" : "package",
           "isViolatingPolicy" : str(ScaRun.get_value_safe("IsViolatingPolicy", vuln)),
+          "isDevDependency" : str(dep_type_index.get(package_id, {}).get("isDevDependency", False)),
+          "isTestDependency" : str(dep_type_index.get(package_id, {}).get("isTest", False)),
         }
       ))
 
@@ -179,11 +181,17 @@ class ScaRun(RunFactory):
 
     packages = ScaRun.get_value_safe("Packages", scan_report)
     package_loc_index = {}
+    package_dep_type_index = {}
 
     for package in packages:
-      package_loc_index[ScaRun.get_value_safe("Id", package)] = ScaRun.get_value_safe("Locations", package)
+      pkg_id = ScaRun.get_value_safe("Id", package)
+      package_loc_index[pkg_id] = ScaRun.get_value_safe("Locations", package)
+      package_dep_type_index[pkg_id] = {
+        "isDevDependency" : ScaRun.get_value_safe("IsDevDependency", package),
+        "isTest" : ScaRun.get_value_safe("IsTest", package),
+      }
 
-    results, rules = ScaRun.__get_vulnerabilities(client, ScaRun.get_value_safe("Vulnerabilities", scan_report), package_loc_index, project_id, scan_id)
+    results, rules = ScaRun.__get_vulnerabilities(client, ScaRun.get_value_safe("Vulnerabilities", scan_report), package_loc_index, package_dep_type_index, project_id, scan_id)
 
     driver = ToolComponent(name="CheckmarxOne-SCA", guid=ScaRun.get_tool_guid(),
                            product_suite=platform,
