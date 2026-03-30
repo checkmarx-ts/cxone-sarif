@@ -2,11 +2,10 @@ from cxone_sarif.utils import normalize_file_uri
 from cxone_sarif.run_factory import RunFactory
 from cxone_api import CxOneClient
 from cxone_api.util import json_on_ok
-from cxone_api.high.sca import get_sca_report, ScaReportOptions, ScaReportType
+from cxone_api.high.sca import get_sca_report, ScaReportOptions, ScaReportType, ScaTenantPackages
 from typing import Dict, List, Tuple
 from pathlib import Path
 import urllib
-import requests
 from sarif_om import (Run,
                       Tool,
                       RunAutomationDetails,
@@ -187,48 +186,22 @@ class ScaRun(RunFactory):
       package_loc_index[ScaRun.get_value_safe("Id", package)] = ScaRun.get_value_safe("Locations", package)
 
     # isDevDependency and isTest are not present in the ScanReportJson package data;
-    # they must be retrieved via the SCA GraphQL API filtered by scanId.
+    # they are retrieved via the SCA GraphQL API using ScaTenantPackages, filtered by scanId and projectId.
     package_dep_type_index = {}
-    gql_query = """
-      query($where: ReportingPackageModelFilterInput, $take: Int!, $skip: Int!) {
-        reportingPackages(where: $where, take: $take, skip: $skip) {
-          packageId
-          isDevDependency
-          isTest
+    tenant_pkgs = ScaTenantPackages(client)
+    tenant_pkgs.where = {
+      "and": [
+        {"scanId": {"eq": scan_id}},
+        {"projectId": {"eq": project_id}}
+      ]
+    }
+    async for pkg in tenant_pkgs:
+      pkg_id = pkg.get("packageId")
+      if pkg_id:
+        package_dep_type_index[pkg_id] = {
+          "isDevDependency": bool(pkg.get("isDevDependency")),
+          "isTest": bool(pkg.get("isTest")),
         }
-      }
-    """
-    gql_url = client.api_endpoint.rstrip("/") + "/sca/graphql/graphql"
-    skip = 0
-    page_size = 500
-    while True:
-      gql_response = json_on_ok(await client.exec_request(
-        requests.post, gql_url,
-        json={
-          "query": gql_query,
-          "variables": {
-            "where": {
-              "and": [
-                {"scanId": {"eq": scan_id}},
-                {"projectId": {"eq": project_id}}
-              ]
-            },
-            "take": page_size,
-            "skip": skip
-          }
-        }
-      ))
-      pkg_page = (gql_response.get("data") or {}).get("reportingPackages", [])
-      for pkg in pkg_page:
-        pkg_id = pkg.get("packageId")
-        if pkg_id:
-          package_dep_type_index[pkg_id] = {
-            "isDevDependency": bool(pkg.get("isDevDependency")),
-            "isTest": bool(pkg.get("isTest")),
-          }
-      if len(pkg_page) < page_size:
-        break
-      skip += page_size
 
     results, rules = ScaRun.__get_vulnerabilities(client, ScaRun.get_value_safe("Vulnerabilities", scan_report), package_loc_index, package_dep_type_index, project_id, scan_id)
 
