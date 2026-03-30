@@ -2,7 +2,7 @@ from cxone_sarif.utils import normalize_file_uri
 from cxone_sarif.run_factory import RunFactory
 from cxone_api import CxOneClient
 from cxone_api.util import json_on_ok
-from cxone_api.high.sca import get_sca_report, ScaReportOptions, ScaReportType
+from cxone_api.high.sca import get_sca_report, ScaReportOptions, ScaReportType, ScaTenantPackages
 from typing import Dict, List, Tuple
 from pathlib import Path
 import urllib
@@ -47,7 +47,7 @@ class ScaRun(RunFactory):
 
 
   @staticmethod
-  def __get_vulnerabilities(client : CxOneClient, vulnerabilities : List[Dict], location_index : Dict[str, List[str]], project_id : str, scan_id : str) -> Tuple[List[Result], Dict[str, str]]:
+  def __get_vulnerabilities(client : CxOneClient, vulnerabilities : List[Dict], location_index : Dict[str, List[str]], dep_type_index : Dict[str, Dict], project_id : str, scan_id : str) -> Tuple[List[Result], Dict[str, str]]:
 
     results = []
     rules = {}
@@ -167,6 +167,8 @@ class ScaRun(RunFactory):
           "firstFoundAt" : ScaRun.get_value_safe("FirstFoundAt", vuln),
           "riskType" : "package",
           "isViolatingPolicy" : str(ScaRun.get_value_safe("IsViolatingPolicy", vuln)),
+          "isDevDependency" : str(dep_type_index.get(package_id, {}).get("isDevDependency", False)),
+          "isTestDependency" : str(dep_type_index.get(package_id, {}).get("isTest", False)),
         }
       ))
 
@@ -183,7 +185,25 @@ class ScaRun(RunFactory):
     for package in packages:
       package_loc_index[ScaRun.get_value_safe("Id", package)] = ScaRun.get_value_safe("Locations", package)
 
-    results, rules = ScaRun.__get_vulnerabilities(client, ScaRun.get_value_safe("Vulnerabilities", scan_report), package_loc_index, project_id, scan_id)
+    # isDevDependency and isTest are not present in the ScanReportJson package data;
+    # they are retrieved via the SCA GraphQL API using ScaTenantPackages, filtered by scanId and projectId.
+    package_dep_type_index = {}
+    tenant_pkgs = ScaTenantPackages(client)
+    tenant_pkgs.where = {
+      "and": [
+        {"scanId": {"eq": scan_id}},
+        {"projectId": {"eq": project_id}}
+      ]
+    }
+    async for pkg in tenant_pkgs:
+      pkg_id = pkg.get("packageId")
+      if pkg_id:
+        package_dep_type_index[pkg_id] = {
+          "isDevDependency": bool(pkg.get("isDevDependency")),
+          "isTest": bool(pkg.get("isTest")),
+        }
+
+    results, rules = ScaRun.__get_vulnerabilities(client, ScaRun.get_value_safe("Vulnerabilities", scan_report), package_loc_index, package_dep_type_index, project_id, scan_id)
 
     driver = ToolComponent(name="CheckmarxOne-SCA", guid=ScaRun.get_tool_guid(),
                            product_suite=platform,
