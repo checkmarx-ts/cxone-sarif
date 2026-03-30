@@ -207,7 +207,12 @@ class ScaRun(RunFactory):
         json={
           "query": gql_query,
           "variables": {
-            "where": {"scanId": {"eq": scan_id}},
+            "where": {
+              "and": [
+                {"scanId": {"eq": scan_id}},
+                {"projectId": {"eq": project_id}}
+              ]
+            },
             "take": page_size,
             "skip": skip
           }
@@ -218,8 +223,8 @@ class ScaRun(RunFactory):
         pkg_id = pkg.get("packageId")
         if pkg_id:
           package_dep_type_index[pkg_id] = {
-            "isDevDependency": pkg.get("isDevDependency", False),
-            "isTest": pkg.get("isTest", False),
+            "isDevDependency": bool(pkg.get("isDevDependency")),
+            "isTest": bool(pkg.get("isTest")),
           }
       if len(pkg_page) < page_size:
         break
