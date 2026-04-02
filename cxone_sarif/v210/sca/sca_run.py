@@ -167,8 +167,8 @@ class ScaRun(RunFactory):
           "firstFoundAt" : ScaRun.get_value_safe("FirstFoundAt", vuln),
           "riskType" : "package",
           "isViolatingPolicy" : str(ScaRun.get_value_safe("IsViolatingPolicy", vuln)),
-          "isDevDependency" : str(dep_type_index.get(package_id, {}).get("isDevDependency", False)),
-          "isTestDependency" : str(dep_type_index.get(package_id, {}).get("isTest", False)),
+          "isDevDependency" : bool(dep_type_index.get(package_id, {}).get("isDevDependency", False)),
+          "isTestDependency" : bool(dep_type_index.get(package_id, {}).get("isTest", False)),
         }
       ))
 
