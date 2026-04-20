@@ -47,7 +47,7 @@ class ScaRun(RunFactory):
 
 
   @staticmethod
-  def __get_vulnerabilities(client : CxOneClient, vulnerabilities : List[Dict], location_index : Dict[str, List[str]], project_id : str, scan_id : str) -> Tuple[List[Result], Dict[str, str]]:
+  def __get_vulnerabilities(client : CxOneClient, vulnerabilities : List[Dict], package_index : Dict[str, List[str]], project_id : str, scan_id : str) -> Tuple[List[Result], Dict[str, str]]:
 
     results = []
     rules = {}
@@ -115,7 +115,7 @@ class ScaRun(RunFactory):
       
       locations = None
       
-      if package_id in location_index.keys():
+      if package_id in package_index.keys():
         
         if locations is None:
           locations = []
@@ -125,7 +125,7 @@ class ScaRun(RunFactory):
         # spec says only use more than one location if every location needs to
         # be changed to fix the issue.  GH displays only the first one,
         # but all will be put here for other Sarif consumers.
-        for artifact_loc in location_index[package_id]:
+        for artifact_loc in package_index[package_id].get("Locations", []):
           locations.append (
             Location(
               id=index,
@@ -167,6 +167,23 @@ class ScaRun(RunFactory):
           "firstFoundAt" : ScaRun.get_value_safe("FirstFoundAt", vuln),
           "riskType" : "package",
           "isViolatingPolicy" : str(ScaRun.get_value_safe("IsViolatingPolicy", vuln)),
+          # Package properties
+          "numberOfVersionsSinceLastUpdate" : str(package_index[package_id].get("NumberOfVersionsSinceLastUpdate", 0)),
+          "newestVersionReleaseDate" : package_index[package_id].get("NewestVersionReleaseDate", ""),
+          "newestVersion" : package_index[package_id].get("NewestVersion", ""),
+          "releaseDate" : package_index[package_id].get("ReleaseDate", ""),
+          "nextVersionWithoutVulnerabilities" : package_index[package_id].get("NextVersionWithoutVulnerabilities", ""),
+          "latestVersionWithoutVulnerabilities" : package_index[package_id].get("LatestVersionWithoutVulnerabilities", ""),
+          "nextRecommendedMoreSecureVersion" : package_index[package_id].get("NextRecommendedMoreSecureVersion", ""),
+          "latestRecommendedMoreSecureVersion" : package_index[package_id].get("LatestRecommendedMoreSecureVersion", ""),
+          "isOutdated" : str(package_index[package_id].get("Outdated", False)),
+          "isMalicious" : str(package_index[package_id].get("IsMalicious", False)),
+          "isDirectDependency" : str(package_index[package_id].get("IsDirectDependency", False)),
+          "isDevelopmentDependency" : str(package_index[package_id].get("IsDevelopmentDependency", False)),
+          "isTestDependency" : str(package_index[package_id].get("IsTestDependency", False)),
+          "isNpmVerified" : str(package_index[package_id].get("IsNpmVerified", False)),
+          "isPrivatePackage" : str(package_index[package_id].get("IsPrivatePackage", False)),
+          "supplier" : package_index[package_id].get("Supplier", ""),
         }
       ))
 
@@ -177,13 +194,13 @@ class ScaRun(RunFactory):
     scan_report = json_on_ok(await get_sca_report(client, scan_id, ScaReportOptions(fileFormat=ScaReportType.ScanReportJson)))
     scan_report_summary = ScaRun.get_value_safe("RiskReportSummary", scan_report)
 
-    packages = ScaRun.get_value_safe("Packages", scan_report)
-    package_loc_index = {}
+    packages = scan_report.get("Packages", {})
+    package_def_index = {}
 
     for package in packages:
-      package_loc_index[ScaRun.get_value_safe("Id", package)] = ScaRun.get_value_safe("Locations", package)
+      package_def_index[ScaRun.get_value_safe("Id", package)] = package
 
-    results, rules = ScaRun.__get_vulnerabilities(client, ScaRun.get_value_safe("Vulnerabilities", scan_report), package_loc_index, project_id, scan_id)
+    results, rules = ScaRun.__get_vulnerabilities(client, ScaRun.get_value_safe("Vulnerabilities", scan_report), package_def_index, project_id, scan_id)
 
     driver = ToolComponent(name="CheckmarxOne-SCA", guid=ScaRun.get_tool_guid(),
                            product_suite=platform,
