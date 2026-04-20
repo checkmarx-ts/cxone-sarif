@@ -1,5 +1,14 @@
 # Release Notes
 
+## 1.1.3
+
+* Add flags for dependency classification in SCA output.
+* Fix interpretation of an error condition when SAST scan metadata is not available.
+
+## 1.1.2
+
+* Update to cxone-async-api 1.1.2
+
 ## 1.1.1
 
 * Added an option to include the SAST result similarity id in the text description.

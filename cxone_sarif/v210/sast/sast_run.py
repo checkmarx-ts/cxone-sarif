@@ -80,15 +80,17 @@ class SastRun(RunFactory):
   @staticmethod
   async def __notifications_factory(metrics : Dict) -> List[ReportingDescriptor]:
     descriptors = []
-    found = SastRun.__metrics_scannedFiles.find(metrics)
 
-    if len(found) > 0 and found[0].value is not None:
-      reported = found[0].value
-      for lang in reported.keys():
-        if 'partiallyGoodFiles' in reported[lang].keys() and int(reported[lang]['partiallyGoodFiles']) > 0:
-          descriptors.append(await SastRun.__partial_file_descriptor_factory(lang, int(reported[lang]['partiallyGoodFiles'])))
-        if 'badFiles' in reported[lang].keys() and int(reported[lang]['badFiles']) > 0:
-          descriptors.append(await SastRun.__bad_file_descriptor_factory(lang, int(reported[lang]['badFiles'])))
+    if metrics is not None:
+      found = SastRun.__metrics_scannedFiles.find(metrics)
+
+      if len(found) > 0 and found[0].value is not None:
+        reported = found[0].value
+        for lang in reported.keys():
+          if 'partiallyGoodFiles' in reported[lang].keys() and int(reported[lang]['partiallyGoodFiles']) > 0:
+            descriptors.append(await SastRun.__partial_file_descriptor_factory(lang, int(reported[lang]['partiallyGoodFiles'])))
+          if 'badFiles' in reported[lang].keys() and int(reported[lang]['badFiles']) > 0:
+            descriptors.append(await SastRun.__bad_file_descriptor_factory(lang, int(reported[lang]['badFiles'])))
     
     return descriptors
   
@@ -184,13 +186,32 @@ class SastRun(RunFactory):
     return index
   
   @staticmethod
+  async def __get_available_metrics(client : CxOneClient, scan_id : str):
+    metric_resp = await retrieve_scan_metrics(client, scan_id)
+
+    if not metric_resp.ok:
+      return None
+
+    return metric_resp.json()
+
+  @staticmethod
+  async def __get_available_metadata(client : CxOneClient, scan_id : str):
+    metadata_resp = await retrieve_scan_metadata(client, scan_id)
+
+    if not metadata_resp.ok:
+      return None
+
+    return metadata_resp.json()
+    
+  
+  @staticmethod
   async def factory(client : CxOneClient, omit_apisec : bool, append_similarity_id : bool, project_id : str, scan_id : str, 
                     platform : str, version : str, organization : str, info_uri : str) -> Run:
 
 
     apisec_index = await SastRun.__make_apisec_index(client, scan_id) if not omit_apisec else {}
 
-    metrics = json_on_ok(await retrieve_scan_metrics(client, scan_id))
+    metrics = await SastRun.__get_available_metrics(client, scan_id)
 
     rules = {}
     results = []
@@ -338,13 +359,13 @@ class SastRun(RunFactory):
                            notifications = await SastRun.__notifications_factory(metrics),
                            rules = [r for r in rules.values()],
                            properties={
-                             "scanMetrics" : metrics
+                             "scanMetrics" : metrics if metrics is not None else {}
                            })
 
-    metadata = json_on_ok(await retrieve_scan_metadata(client, scan_id))
+    metadata = await SastRun.__get_available_metadata(client, scan_id)
     tool = Tool(driver=driver,
                 properties={
-                  "scanMetadata" : metadata
+                  "scanMetadata" : metadata if metadata is not None else {}
                   })
     
     return Run(tool=tool, 
