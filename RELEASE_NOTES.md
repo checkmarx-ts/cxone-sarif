@@ -4,6 +4,7 @@
 
 * Add flags for dependency classification in SCA output.
 * Fix interpretation of an error condition when SAST scan metadata is not available.
+* Bump dependency versions.
 
 ## 1.1.2
 
