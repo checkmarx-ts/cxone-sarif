@@ -16,7 +16,7 @@ on:
 
 jobs:
   execute-pylint-and-integration-tests:
-    runs-on: ubuntu-latest
+    runs-on: cx-public-ubuntu-x64
     strategy:
       max-parallel: 2
       matrix:
