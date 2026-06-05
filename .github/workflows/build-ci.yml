@@ -130,7 +130,7 @@ jobs:
           pylint --disable=all --enable=E,F --disable=E1121 --score=false cxone_sarif
 
 
-  # call-package-build:
-  #   uses: ./.github/workflows/build.yml
-  #   with:
-  #     buildonly: true
+  call-build-wheel:
+    uses: ./.github/workflows/build-wheel.yml
+    with:
+      buildonly: true
