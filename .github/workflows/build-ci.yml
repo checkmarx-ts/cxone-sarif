@@ -73,9 +73,6 @@ jobs:
   execute-module-integration-test:
     runs-on: cx-public-ubuntu-x64
     needs: [execute-dvwa-scan]
-    env:
-      CX_APIKEY: ${{ env.TEST_API_KEY }}
-      CX_TENANT: ${{ env.TEST_TENANT }}
     strategy:
       max-parallel: 2
       matrix:
@@ -109,6 +106,8 @@ jobs:
       - name: Module Integration Test
         shell: bash
         run: |
+          export CX_APIKEY=${{ env.TEST_API_KEY }}
+          export CX_TENANT=${{ env.TEST_TENANT }}
           python integration_tests/module.py
 
 
