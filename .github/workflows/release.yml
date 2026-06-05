@@ -57,15 +57,6 @@ jobs:
           git tag ${{ needs.make-tag-string.outputs.tag }}
           git push origin --tags
 
-  # publish-release:
-  #   permissions:
-  #     contents: write
-  #   needs: [make-tag-string, create-tag]
-  #   uses: ./.github/workflows/build.yml
-  #   with:
-  #     version: ${{ needs.make-tag-string.outputs.tag }}
-  #     prerelease: ${{ inputs.prerelease }}
-
   build-wheel:
     needs: [make-tag-string, create-tag]
     uses: ./.github/workflows/build-wheel.yml
