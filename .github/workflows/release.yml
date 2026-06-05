@@ -67,7 +67,6 @@ jobs:
   #     prerelease: ${{ inputs.prerelease }}
 
   build-wheel:
-    runs-on: cx-public-ubuntu-x64
     needs: [make-tag-string, create-tag]
     uses: ./.github/workflows/build-wheel.yml
     with:
