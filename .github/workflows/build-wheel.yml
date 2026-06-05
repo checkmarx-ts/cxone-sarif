@@ -30,7 +30,7 @@ jobs:
 
       - name: Update version
         if: ${{ ! inputs.buildonly }}
-        run: echo "__version__='${{ inputs.version }}'" > cxone_sarif/__version__.py
+        run: echo "__version__='${{ inputs.tag }}'" > cxone_sarif/__version__.py
 
       - name: Build package
         run: |
