@@ -44,10 +44,13 @@ jobs:
           - "3.12"
           - "3.13"
           - "3.14"
-    container: python:${{ matrix.pver }}
     steps:
       - name: Fetch Code
         uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b
+
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        with:
+          python-version: ${{ matrix.pver }}
 
       - name: Make virtual environment
         shell: bash
@@ -82,10 +85,13 @@ jobs:
           - "3.12"
           - "3.13"
           - "3.14"
-    container: python:${{ matrix.pver }}
     steps:
       - name: Fetch Code
         uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b
+
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        with:
+          python-version: ${{ matrix.pver }}
 
       - name: Make virtual environment
         shell: bash
@@ -117,10 +123,13 @@ jobs:
           - "3.12"
           - "3.13"
           - "3.14"
-    container: python:${{ matrix.pver }}
     steps:
       - name: Fetch Code
         uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b
+
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        with:
+          python-version: ${{ matrix.pver }}
 
       - name: Make virtual environment
         shell: bash
