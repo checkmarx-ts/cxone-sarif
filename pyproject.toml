@@ -15,7 +15,7 @@ dependencies = [
 ]
 
 description = "CheckmarxOne Sarif Transformation API"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 
 [project.scripts]
 cxone-sarif = "cxone_sarif.__main__:cli_entry"
