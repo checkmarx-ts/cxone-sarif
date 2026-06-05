@@ -77,9 +77,17 @@ jobs:
       tag: ${{ needs.make-tag-string.outputs.tag }}
       prerelease: ${{ inputs.prerelease }}
 
+  publish-release:
+    needs: [make-tag-string, build-wheel]
+    permissions:
+      contents: write
+    steps:
+      - name: Placeholder
+        run: exit 0
+
   artifact-cleanup:
     runs-on: cx-public-ubuntu-x64
-    needs: [build-wheel]
+    needs: [publish-release]
     if: always() && needs.build-wheel.result == 'success'
     steps:
       - uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118
