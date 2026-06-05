@@ -28,7 +28,7 @@ jobs:
       - name: Execute scan
         id: scan
         run: |
-          export cx_apikey=${{ env.TEST_API_KEY }}
+          export CX_APIKEY=${{ env.TEST_API_KEY }}
           ./bin/cx scan create --sca-resolver ./bin/ScaResolver --file-filter '!bin' --project-name 'cxone-sarf-ci/dvwa' --branch 'any' -s . 
           echo "scanid=ebc2a229-3ca1-4738-b313-cc90e87727db" >> $GITHUB_OUTPUT
 
