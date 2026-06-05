@@ -29,8 +29,9 @@ jobs:
         id: scan
         run: |
           export CX_APIKEY=${{ env.TEST_API_KEY }}
-          ./bin/cx scan create --sca-resolver ./bin/ScaResolver --file-filter '!bin' --project-name 'cxone-sarf-ci/dvwa' --branch 'any' -s . 
-          echo "scanid=ebc2a229-3ca1-4738-b313-cc90e87727db" >> $GITHUB_OUTPUT
+          scan_id=$(./bin/cx scan create --ignore-policy --sca-resolver ./bin/ScaResolver --file-filter '!bin' --project-name 'cxone-sarf-ci/dvwa' --branch 'any' -s . | grep -oP 'Scan ID:\s+\K[0-9a-f-]+')
+          echo Scan ID from output: $scan_id
+          echo "scanid=$scan_id" >> $GITHUB_OUTPUT
 
 
   execute-cli-integration-test:
