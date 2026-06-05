@@ -10,10 +10,6 @@ on:
         description: "Check if this is to publish a pre-release."
         required: true
         type: boolean
-      skiputs:
-        description: "Check to skip unit test execution (not advised)."
-        required: true
-        type: boolean
 
 permissions:
   contents: read
@@ -71,6 +67,7 @@ jobs:
   #     prerelease: ${{ inputs.prerelease }}
 
   build-wheel:
+    runs-on: cx-public-ubuntu-x64
     needs: [make-tag-string, create-tag]
     uses: ./.github/workflows/build-wheel.yml
     with:
@@ -78,6 +75,7 @@ jobs:
       prerelease: ${{ inputs.prerelease }}
 
   publish-release:
+    runs-on: cx-public-ubuntu-x64
     needs: [make-tag-string, build-wheel]
     permissions:
       contents: write
