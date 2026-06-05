@@ -1,6 +1,6 @@
 name: CI Build Steps [called]
 on:
-  workflow_call:
+  workflow_dispatch:
   push:
 
 env:
