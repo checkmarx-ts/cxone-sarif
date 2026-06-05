@@ -46,11 +46,9 @@ jobs:
 
   create-tag:
     runs-on: cx-public-ubuntu-x64
-    needs: [make-tag-string, validate-no-tag]
-    outputs:
-      done: ${{ steps.done_check.outputs.status }}
     permissions:
       contents: write
+    needs: [make-tag-string, validate-no-tag]
     steps:
       - name: Fetch Code
         uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b
@@ -63,26 +61,37 @@ jobs:
           git tag ${{ needs.make-tag-string.outputs.tag }}
           git push origin --tags
 
-      - name: Set tag status
-        id: done_check
-        run: |
-          echo "status=true" >> "$GITHUB_OUTPUT"
+  # publish-release:
+  #   permissions:
+  #     contents: write
+  #   needs: [make-tag-string, create-tag]
+  #   uses: ./.github/workflows/build.yml
+  #   with:
+  #     version: ${{ needs.make-tag-string.outputs.tag }}
+  #     prerelease: ${{ inputs.prerelease }}
 
-  publish-release:
-    permissions:
-      contents: write
+  build-wheel:
     needs: [make-tag-string, create-tag]
-    uses: ./.github/workflows/build.yml
+    uses: ./.github/workflows/build-wheel.yml
     with:
-      version: ${{ needs.make-tag-string.outputs.tag }}
+      tag: ${{ needs.make-tag-string.outputs.tag }}
       prerelease: ${{ inputs.prerelease }}
+
+  artifact-cleanup:
+    runs-on: cx-public-ubuntu-x64
+    needs: [build-wheel]
+    if: always() && needs.build-wheel.result == 'success'
+    steps:
+      - uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118
+        with:
+          name: wheel-${{ github.run_number }}
 
   remove-tag-on-failure:
     needs: [make-tag-string, create-tag, publish-release]
     runs-on: cx-public-ubuntu-x64
     permissions:
       contents: write
-    if: ${{ failure() && needs.create-tag.outputs.done }}
+    if: ${{ (failure() || cancelled()) && needs.create-tag.result == 'success' }}
     steps:
       - name: Fetch Code
         uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b
