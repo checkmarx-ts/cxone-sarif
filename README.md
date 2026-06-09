@@ -1,6 +1,6 @@
 # SARIF v2.1.0 Python Module for CheckmarxOne
 
-This is a Python 3.9+ module for generating SARIF logs for scans from CheckmarxOne.
+This is a Python 3.10+ module for generating SARIF logs for scans from CheckmarxOne.
 
 It can be executed as a command line application or integrated into your own applications via the
 module's API.  The generated SARIF log file is designed to align closer with the SARIF standard than

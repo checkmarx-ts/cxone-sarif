@@ -10,10 +10,6 @@ on:
         description: "Check if this is to publish a pre-release."
         required: true
         type: boolean
-      skiputs:
-        description: "Check to skip unit test execution (not advised)."
-        required: true
-        type: boolean
 
 permissions:
   contents: read
@@ -46,11 +42,9 @@ jobs:
 
   create-tag:
     runs-on: cx-public-ubuntu-x64
-    needs: [make-tag-string, validate-no-tag]
-    outputs:
-      done: ${{ steps.done_check.outputs.status }}
     permissions:
       contents: write
+    needs: [make-tag-string, validate-no-tag]
     steps:
       - name: Fetch Code
         uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b
@@ -63,26 +57,82 @@ jobs:
           git tag ${{ needs.make-tag-string.outputs.tag }}
           git push origin --tags
 
-      - name: Set tag status
-        id: done_check
-        run: |
-          echo "status=true" >> "$GITHUB_OUTPUT"
+  build-wheel:
+    needs: [make-tag-string, create-tag]
+    uses: ./.github/workflows/build-wheel.yml
+    with:
+      tag: ${{ needs.make-tag-string.outputs.tag }}
+      prerelease: ${{ inputs.prerelease }}
 
   publish-release:
+    runs-on: cx-public-ubuntu-x64
+    needs: [make-tag-string, build-wheel]
     permissions:
       contents: write
-    needs: [make-tag-string, create-tag]
-    uses: ./.github/workflows/build.yml
-    with:
-      version: ${{ needs.make-tag-string.outputs.tag }}
-      prerelease: ${{ inputs.prerelease }}
+    steps:
+      - name: Download wheel artifact
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: wheel-${{ github.run_number }}
+          path: ./dist
+
+      - name: Make release text
+        run: |
+          WHEEL_NAME=$(basename $(ls dist/*.whl))
+          WHEEL_HASH=$(pip3 hash dist/$WHEEL_NAME | grep "^--")
+          RELEASE_URL="https://github.com/${{ github.repository }}/releases/download/${{ needs.make-tag-string.outputs.tag }}/$WHEEL_NAME"
+
+          echo "# Checkmarx One Sarif API and CLI ${{ needs.make-tag-string.outputs.tag }}" > release.md
+
+          echo 'Installation can be performed by executing the following in a command shell:' >> release.md
+
+          echo '```' >> release.md
+          echo pip install $RELEASE_URL >> release.md
+          echo '```' >> release.md
+
+          echo 'The API can be referenced in your Python project by adding one of the following lines to your `requirements.txt` file:' >> release.md
+
+          echo '```' >> release.md
+          echo $RELEASE_URL >> release.md
+          echo '```' >> release.md
+
+          echo '```' >> release.md
+          echo "git+https://github.com/${{ github.repository }}.git@${{ needs.make-tag-string.outputs.tag }}" >> release.md
+          echo '```' >> release.md
+
+          echo "## Hashes" >> release.md
+          echo "### $WHEEL_NAME" >> release.md
+          echo '```' >> release.md
+          echo "$WHEEL_HASH" >> release.md
+          echo '```' >> release.md
+
+
+      - name: Create GitHub release
+        uses: step-security/release-action@a0d8e0f90f554c15366ca2c9046bf4090d24adbe # v1.21.0
+        with:
+          allowUpdates: true
+          artifactErrorsFailBuild: true
+          artifacts: ./dist/*.whl
+          bodyFile: release.md
+          name: ${{ needs.make-tag-string.outputs.tag }}
+          prerelease: ${{ inputs.prerelease }}
+          tag: ${{ needs.make-tag-string.outputs.tag }}
+
+  artifact-cleanup:
+    runs-on: cx-public-ubuntu-x64
+    needs: [publish-release]
+    if: always() && needs.build-wheel.result == 'success'
+    steps:
+      - uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118
+        with:
+          name: wheel-${{ github.run_number }}
 
   remove-tag-on-failure:
     needs: [make-tag-string, create-tag, publish-release]
     runs-on: cx-public-ubuntu-x64
     permissions:
       contents: write
-    if: ${{ failure() && needs.create-tag.outputs.done }}
+    if: ${{ (failure() || cancelled()) && needs.create-tag.result == 'success' }}
     steps:
       - name: Fetch Code
         uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b
