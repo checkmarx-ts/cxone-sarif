@@ -134,5 +134,6 @@ jobs:
 
   call-build-wheel:
     uses: ./.github/workflows/build-wheel.yml
+    secrets: inherit
     with:
       buildonly: true
