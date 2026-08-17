@@ -28,3 +28,4 @@ version = { attr = "cxone_sarif.__version__.__version__" }
 
 [project.optional-dependencies]
 cli = ["docopt-ng==0.9.0"]
+
