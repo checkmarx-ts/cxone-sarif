@@ -57,7 +57,7 @@ jobs:
       - name: Install packages for pylint and CLI testing
         shell: bash
         run: |
-          pip config set global.index-url https://pypi.echohq.com/simple
+          pip config set global.index-url https://:${{ secrets.ECHO_LIBRARIES_ACCESS_KEY }}@pypi.echohq.com/simple
           pip install .[cli]
 
       - name: CLI Integration Test
@@ -88,7 +88,7 @@ jobs:
       - name: Install packages for module integration testing
         shell: bash
         run: |
-          pip config set global.index-url https://pypi.echohq.com/simple
+          pip config set global.index-url https://:${{ secrets.ECHO_LIBRARIES_ACCESS_KEY }}@pypi.echohq.com/simple
           pip install .
 
       - name: Module Integration Test
@@ -121,7 +121,7 @@ jobs:
       - name: Install packages for pylint
         shell: bash
         run: |
-          pip config set global.index-url https://pypi.echohq.com/simple
+          pip config set global.index-url https://:${{ secrets.ECHO_LIBRARIES_ACCESS_KEY }}@pypi.echohq.com/simple
           pip install . pylint
 
       - name: Pylint
