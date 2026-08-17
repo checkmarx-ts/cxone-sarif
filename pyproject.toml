@@ -27,4 +27,4 @@ package-dir = {"cxone_sarif" = "cxone_sarif"}
 version = { attr = "cxone_sarif.__version__.__version__" }
 
 [project.optional-dependencies]
-cli = ["docopt==0.6.2"]
+cli = ["docopt-ng==0.9.0"]
