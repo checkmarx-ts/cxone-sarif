@@ -60,6 +60,7 @@ jobs:
   build-wheel:
     needs: [make-tag-string, create-tag]
     uses: ./.github/workflows/build-wheel.yml
+    secrets: inherit
     with:
       tag: ${{ needs.make-tag-string.outputs.tag }}
       prerelease: ${{ inputs.prerelease }}

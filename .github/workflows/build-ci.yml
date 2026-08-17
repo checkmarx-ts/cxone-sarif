@@ -2,6 +2,8 @@ name: CI Build
 on:
   workflow_dispatch:
   push:
+  schedule:
+    - cron: '0 3 * * 1'
 
 env:
   TEST_TENANT: ${{ vars.TEST_CXONE_TENANT }}
@@ -23,13 +25,12 @@ jobs:
         run: |
           mkdir -p ./bin
           curl -fsSL https://github.com/Checkmarx/ast-cli/releases/latest/download/ast-cli_linux_x64.tar.gz | tar -xz -C ./bin
-          curl -fsSL https://sca-downloads.s3.amazonaws.com/cli/latest/ScaResolver-linux64.tar.gz | tar -xz -C ./bin
 
       - name: Execute scan
         id: scan
         run: |
           export CX_APIKEY=${{ env.TEST_API_KEY }}
-          scan_id=$(./bin/cx scan create --ignore-policy --sca-resolver ./bin/ScaResolver --file-filter '!bin' --project-name 'cxone-sarf-ci/dvwa' --branch 'any' -s . | grep -oP 'Scan ID:\s+\K[0-9a-f-]+')
+          scan_id=$(./bin/cx scan create --ignore-policy --file-filter '!bin' --project-name 'cxone-sarf-ci/dvwa' --branch 'any' -s . | grep -oP 'Scan ID:\s+\K[0-9a-f-]+')
           echo Scan ID from output: $scan_id
           echo "scanid=$scan_id" >> $GITHUB_OUTPUT
 
@@ -57,7 +58,7 @@ jobs:
       - name: Install packages for pylint and CLI testing
         shell: bash
         run: |
-          pip config set global.index-url https://pypi.echohq.com/simple
+          pip config set global.index-url https://:${{ secrets.ECHO_LIBRARIES_ACCESS_KEY }}@pypi.echohq.com/simple
           pip install .[cli]
 
       - name: CLI Integration Test
@@ -88,7 +89,7 @@ jobs:
       - name: Install packages for module integration testing
         shell: bash
         run: |
-          pip config set global.index-url https://pypi.echohq.com/simple
+          pip config set global.index-url https://:${{ secrets.ECHO_LIBRARIES_ACCESS_KEY }}@pypi.echohq.com/simple
           pip install .
 
       - name: Module Integration Test
@@ -121,7 +122,7 @@ jobs:
       - name: Install packages for pylint
         shell: bash
         run: |
-          pip config set global.index-url https://pypi.echohq.com/simple
+          pip config set global.index-url https://:${{ secrets.ECHO_LIBRARIES_ACCESS_KEY }}@pypi.echohq.com/simple
           pip install . pylint
 
       - name: Pylint
@@ -132,5 +133,6 @@ jobs:
 
   call-build-wheel:
     uses: ./.github/workflows/build-wheel.yml
+    secrets: inherit
     with:
       buildonly: true
