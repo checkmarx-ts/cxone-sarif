@@ -1,9 +1,12 @@
 # Release Notes
 
-## 1.1.4
+## 1.1.5
 
 * Maintenance: dependency bumps and specification updates
 
+## 1.1.4
+
+* Maintenance: dependency bumps and specification updates
 
 ## 1.1.3
 
