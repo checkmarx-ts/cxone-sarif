@@ -1,5 +1,13 @@
 # Release Notes
 
+## 1.1.5
+
+* Maintenance: dependency bumps and specification updates
+
+## 1.1.4
+
+* Maintenance: dependency bumps and specification updates
+
 ## 1.1.3
 
 * Add flags for dependency classification in SCA output.
