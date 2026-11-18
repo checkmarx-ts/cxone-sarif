@@ -67,6 +67,11 @@ jobs:
         run: |
           pip install .[cli]
 
+      - name: CLI Help Test
+        shell: bash
+        run: |
+          cxone-sarif --help
+
       - name: CLI Integration Test
         shell: bash
         run: |
