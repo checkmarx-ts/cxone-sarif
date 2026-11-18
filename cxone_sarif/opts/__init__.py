@@ -15,7 +15,6 @@ class ReportOpts:
     SkipKics: bool = field(default=False)
     SkipContainers: bool = field(default=False)
     SkipSecrets : bool = field(default=False)
-    SkipAisc : bool = field(default=False)
 
 
 DEFAULT = ReportOpts(
@@ -24,5 +23,4 @@ DEFAULT = ReportOpts(
     SkipKics=False,
     SkipContainers=False,
     SkipSecrets=False,
-    SkipAisc=False
 )

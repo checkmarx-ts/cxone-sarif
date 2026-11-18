@@ -1,7 +1,6 @@
 {
   "1.2.0" : [
     "Results for secrets scanning now included in generated logs as \"CheckmarxOne-Secrets\" tool.",
-    "Results for AI supply chain scanning now included in generated logs as \"CheckmarxOne-AISC\" tool.",
     "Dependency updates"
   ],
   "1.1.5": [

@@ -29,7 +29,6 @@ async def main():
                      [--no-kics]
                      [--no-containers]
                      [--no-secrets]
-                     [--no-aisc]
                      [--with-sast-simid] [-qk] [-t THREADS] SCANIDS...
 
     SCANIDS...          One or more space-separated scan ids that will each generate a file containing a SARIF log.
@@ -82,8 +81,6 @@ async def main():
     --no-containers     Suppress container security scan results.
 
     --no-secrets        Suppress secret scan results.
-
-    --no-aisc           Suppress AI supply chain scan results.
 
     --outdir OUTDIR     Directory where to write the SARIF log files.   [default: .]
 
@@ -141,6 +138,10 @@ async def main():
             auth_endpoint = cx.CxOneAuthEndpoint(args["--tenant"], args["--iam-url"])
             api_endpoint = cx.CxOneApiEndpoint(args["--url"])
 
+        if args["-k"]:
+            import urllib3
+            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
         if args["--proxy"] is not None:
             proxy = {"http": args["--proxy"], "https": args["--proxy"]}
         else:
@@ -155,7 +156,7 @@ async def main():
                 "Some scan ids that were defined multiple times, only one log will be produced per unique scan id."
             )
 
-        task_result, _ = await tqdm.gather(
+        results = await tqdm.gather(
             *[
                 execute_on_scanid(
                     client,
@@ -171,7 +172,6 @@ async def main():
                         SkipKics=args["--no-kics"],
                         SkipContainers=args["--no-containers"],
                         SkipSecrets=args['--no-secrets'],
-                        SkipAisc=args['--no-aisc']
                     ),
                     concurrency,
                 )
@@ -180,7 +180,7 @@ async def main():
             desc="Processing scans"
         )
 
-        exit(max([x.result() for x in task_result]))
+        exit(max(results))
     except ModuleNotFoundError:
         print(
             "The CLI interface is not operational since it appears [cli] extra is not installed."
