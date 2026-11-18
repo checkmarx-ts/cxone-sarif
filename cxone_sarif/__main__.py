@@ -106,8 +106,6 @@ async def main():
         # so load it dynamically when executing as a script.
         docopt_lib = importlib.import_module("docopt")
         docopt = docopt_lib.docopt
-        tqdm_lib = importlib.import_module("tqdm.asyncio")
-        tqdm = tqdm_lib.tqdm
 
         args = docopt(
             main.__doc__.replace("{CXREGIONS}", ",".join(cx.ApiRegionEndpoints.keys())),
@@ -156,7 +154,7 @@ async def main():
                 "Some scan ids that were defined multiple times, only one log will be produced per unique scan id."
             )
 
-        results = await tqdm.gather(
+        results = await asyncio.gather(
             *[
                 execute_on_scanid(
                     client,
@@ -176,8 +174,7 @@ async def main():
                     concurrency,
                 )
                 for scanid in set(args["SCANIDS"])
-            ],
-            desc="Processing scans"
+            ]
         )
 
         exit(max(results))
