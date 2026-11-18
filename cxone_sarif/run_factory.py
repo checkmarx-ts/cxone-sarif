@@ -26,11 +26,8 @@ class RunFactory:
     def get_value_safe(key: str, json: Dict) -> Any:
         if json is None:
             return None
-
-        if key in json.keys():
-            return json[key]
         else:
-            return None
+            return json.get(key)
 
     @staticmethod
     def get_value_safe_with_default(key: str, json: Dict, default: Any) -> Any:
