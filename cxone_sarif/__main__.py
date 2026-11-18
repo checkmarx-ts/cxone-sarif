@@ -18,6 +18,7 @@ DEFAULT_LOGLEVEL = "INFO"
 
 
 async def main():
+    # fmt: off
     """Usage: cxone-sarif [-h | --help | -v | --version] --tenant TENANT (--region REGION | (--url URL --iam-url IAMURL))
                      (--api-key APIKEY | (--client OCLIENT --secret OSECRET) | --use-env-oauth | --use-env-api-key)
                      [--level LOGLEVEL] [--log-file LOGFILE] [--timeout TIMEOUT] [--delay DELAY] [--retries RETRIES] [--proxy IP:PORT]
@@ -67,12 +68,15 @@ async def main():
     --no-sast           Suppress static code analysis scan results.
     --no-sast-apisec    Do not augment SAST results with API security scan results.
 
-
     --no-sca            Suppress software composition analysis scan results.
 
     --no-kics           Suppress infrastructure as code scan results.
 
     --no-containers     Suppress container security scan results.
+
+    --no-secrets        Suppress secret scan results.
+
+    --no-aisc           Suppress AI supply chain scan results.
 
     --outdir OUTDIR     Directory where to write the SARIF log files.   [default: .]
 
@@ -92,12 +96,14 @@ async def main():
     -q                  Do not output logs to the console.
 
     """
-
+    # fmt: on
     try:
         # The docopt module may not be installed unless the [cli] extra is installed
         # so load it dynamically when executing as a script.
         docopt_lib = importlib.import_module("docopt")
         docopt = docopt_lib.docopt
+        tqdm_lib = importlib.import_module("tqdm.asyncio")
+        tqdm = tqdm_lib.tqdm
 
         args = docopt(
             main.__doc__.replace("{CXREGIONS}", ",".join(cx.ApiRegionEndpoints.keys())),
@@ -142,33 +148,36 @@ async def main():
                 "Some scan ids that were defined multiple times, only one log will be produced per unique scan id."
             )
 
-        task_result, _ = await asyncio.wait(
-            [
-                asyncio.get_running_loop().create_task(
-                    execute_on_scanid(
-                        client,
-                        scanid,
-                        args["--outdir"],
-                        ReportOpts(
-                            SastOpts=SastOpts(
-                                SkipSast=args["--no-sast"],
-                                OmitApiResults=args["--no-sast-apisec"],
-                                AppendSimilarityId=args["--with-sast-simid"],
-                            ),
-                            SkipSca=args["--no-sca"],
-                            SkipKics=args["--no-kics"],
-                            SkipContainers=args["--no-containers"],
+        task_result, _ = await tqdm.gather(
+            *[
+                execute_on_scanid(
+                    client,
+                    scanid,
+                    args["--outdir"],
+                    ReportOpts(
+                        SastOpts=SastOpts(
+                            SkipSast=args["--no-sast"],
+                            OmitApiResults=args["--no-sast-apisec"],
+                            AppendSimilarityId=args["--with-sast-simid"],
                         ),
-                        concurrency,
-                    )
+                        SkipSca=args["--no-sca"],
+                        SkipKics=args["--no-kics"],
+                        SkipContainers=args["--no-containers"],
+                        SkipSecrets=args['--no-secrets'],
+                        SkipAisc=args['--no-aisc']
+                    ),
+                    concurrency,
                 )
                 for scanid in set(args["SCANIDS"])
-            ]
+            ],
+            desc="Processing scans"
         )
 
         exit(max([x.result() for x in task_result]))
     except ModuleNotFoundError:
-        print("The CLI interface is not operational since it appears [cli] extra is not installed.")
+        print(
+            "The CLI interface is not operational since it appears [cli] extra is not installed."
+        )
         exit(2)
     except docopt_lib.DocoptExit as bad_args:
         print("Incorrect arguments provided.")

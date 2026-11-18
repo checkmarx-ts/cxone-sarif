@@ -1,19 +1,21 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass(frozen=True)
 class SastOpts:
-    SkipSast: bool
-    OmitApiResults: bool
-    AppendSimilarityId: bool
+    SkipSast: bool = field(default=False)
+    OmitApiResults: bool = field(default=False)
+    AppendSimilarityId: bool = field(default=False)
 
 
 @dataclass(frozen=True)
 class ReportOpts:
-    SastOpts: SastOpts
-    SkipSca: bool
-    SkipKics: bool
-    SkipContainers: bool
+    SastOpts: SastOpts = field(default_factory=SastOpts) # type: ignore
+    SkipSca: bool = field(default=False)
+    SkipKics: bool = field(default=False)
+    SkipContainers: bool = field(default=False)
+    SkipSecrets : bool = field(default=False)
+    SkipAisc : bool = field(default=False)
 
 
 DEFAULT = ReportOpts(
@@ -21,4 +23,6 @@ DEFAULT = ReportOpts(
     SkipSca=False,
     SkipKics=False,
     SkipContainers=False,
+    SkipSecrets=False,
+    SkipAisc=False
 )
