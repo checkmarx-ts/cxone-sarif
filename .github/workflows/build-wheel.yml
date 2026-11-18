@@ -15,6 +15,11 @@ on:
 permissions:
   contents: read
 
+env:
+  VIRTUALENV_NO_PERIODIC_UPDATE: 1
+  PIP_INDEX_URL: https://:${{ secrets.ECHO_LIBRARIES_ACCESS_KEY }}@pypi.echohq.com/simple  
+
+
 jobs:
   create-wheel:
     runs-on: cx-public-ubuntu-x64
@@ -28,13 +33,14 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Upgrade pip
+        shell: bash
+        run: |
+          pip install --upgrade pip
+
       - name: Update version
         if: ${{ ! inputs.buildonly }}
         run: echo "__version__='${{ inputs.tag }}'" > cxone_sarif/__version__.py
-
-      - name: Set package repo
-        run: |
-          pip config set global.index-url https://:${{ secrets.ECHO_LIBRARIES_ACCESS_KEY }}@pypi.echohq.com/simple
 
       - name: Install build
         run: |
