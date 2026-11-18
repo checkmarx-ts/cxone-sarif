@@ -22,7 +22,14 @@ async def main():
     """Usage: cxone-sarif [-h | --help | -v | --version] --tenant TENANT (--region REGION | (--url URL --iam-url IAMURL))
                      (--api-key APIKEY | (--client OCLIENT --secret OSECRET) | --use-env-oauth | --use-env-api-key)
                      [--level LOGLEVEL] [--log-file LOGFILE] [--timeout TIMEOUT] [--delay DELAY] [--retries RETRIES] [--proxy IP:PORT]
-                     [--outdir OUTDIR] [--no-sast] [--no-sast-apisec] [--no-sca] [--no-kics] [--no-containers]
+                     [--outdir OUTDIR]
+                     [--no-sast]
+                     [--no-sast-apisec]
+                     [--no-sca]
+                     [--no-kics]
+                     [--no-containers]
+                     [--no-secrets]
+                     [--no-aisc]
                      [--with-sast-simid] [-qk] [-t THREADS] SCANIDS...
 
     SCANIDS...          One or more space-separated scan ids that will each generate a file containing a SARIF log.
