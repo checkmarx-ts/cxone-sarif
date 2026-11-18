@@ -98,9 +98,7 @@ async def get_sarif_v210_log_for_scan(
 
     _log = logging.getLogger(f"get_sarif_v210_log_for_scan:{scan_id}")
 
-    __info_uri = (
-        "https://checkmarx.com/resource/documents/en/34965-67042-checkmarx-one.html"
-    )
+    __info_uri = "https://docs.checkmarx.com/"
     __org = "Checkmarx"
     __details_engines = parse("$.engines")
 
