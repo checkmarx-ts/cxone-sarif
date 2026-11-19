@@ -138,6 +138,7 @@ async def main():
 
         if args["-k"]:
             import urllib3
+
             urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
         if args["--proxy"] is not None:
@@ -169,7 +170,7 @@ async def main():
                         SkipSca=args["--no-sca"],
                         SkipKics=args["--no-kics"],
                         SkipContainers=args["--no-containers"],
-                        SkipSecrets=args['--no-secrets'],
+                        SkipSecrets=args["--no-secrets"],
                     ),
                     concurrency,
                 )

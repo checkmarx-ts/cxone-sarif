@@ -1,6 +1,6 @@
 import base64, urllib
 from cxone_sarif.run_factory import RunFactory
-from cxone_sarif.utils import normalize_file_uri
+from cxone_sarif.utils import normalize_file_uri, AllResultsCache, CachedResultType
 from cxone_api import CxOneClient
 from cxone_api.util import page_generator
 from cxone_api.low.all_scanners_results import retrieve_scan_results_all_scanners
@@ -57,6 +57,7 @@ class ContainersRun(RunFactory):
         scan_id: str,
         platform: str,
         version: str,
+        all_results_cache : AllResultsCache,
         organization: str,
         info_uri: str,
     ) -> Run:
@@ -64,19 +65,7 @@ class ContainersRun(RunFactory):
         results = []
         rules = {}
 
-        # This is a bit inefficient, maybe one day containers will have its own result API.
-        # This data stream lacks some data required for best results.
-        async for result in page_generator(
-            retrieve_scan_results_all_scanners,
-            array_element="results",
-            client=client,
-            scan_id=scan_id,
-            limit=100,
-            offset_is_by_count=False,
-        ):
-
-            if not "containers" == ContainersRun.get_value_safe("type", result):
-                continue
+        async for result in await all_results_cache.results_by_type(CachedResultType.CONTAINERS):
 
             cve_id = ContainersRun.get_value_safe("id", result)
             vuln_id = cve_id

@@ -10,11 +10,11 @@ class SastOpts:
 
 @dataclass(frozen=True)
 class ReportOpts:
-    SastOpts: SastOpts = field(default_factory=SastOpts) # type: ignore
+    SastOpts: SastOpts = field(default_factory=SastOpts)  # type: ignore
     SkipSca: bool = field(default=False)
     SkipKics: bool = field(default=False)
     SkipContainers: bool = field(default=False)
-    SkipSecrets : bool = field(default=False)
+    SkipSecrets: bool = field(default=False)
 
 
 DEFAULT = ReportOpts(

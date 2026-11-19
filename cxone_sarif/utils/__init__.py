@@ -1,3 +1,6 @@
+from .all_results_cache import AllResultsCache, CachedResultType
+
+
 def normalize_file_uri(fname: str) -> str:
     return fname.lstrip("/")
 

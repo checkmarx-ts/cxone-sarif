@@ -8,10 +8,11 @@ from cxone_api.low.projects import retrieve_project_info
 from cxone_api.util import json_on_ok
 from cxone_api.low.scans import retrieve_scan_details
 from sarif_om import SarifLog, Run, VersionControlDetails
-from jsonpath_ng import parse
+from jsonpath_ng.ext import parse
 from jschema_to_python.to_json import to_json
 from cxone_sarif.opts import ReportOpts
-from .v210 import get_sast_run, get_sca_run, get_iac_run, get_containers_run
+from cxone_sarif.utils import AllResultsCache
+from .v210 import get_sast_run, get_sca_run, get_iac_run, get_containers_run, get_secrets_run
 from .__agent__ import __agent__
 from .__version__ import __version__
 
@@ -101,6 +102,9 @@ async def get_sarif_v210_log_for_scan(
     __info_uri = "https://docs.checkmarx.com/"
     __org = "Checkmarx"
     __details_engines = parse("$.engines")
+    __2ms_results_indicator = parse("$.metadata.configs[?(@.type == 'microengines')].value['2ms']")
+
+    all_results_cache = AllResultsCache(client, scan_id)
 
     try:
 
@@ -121,7 +125,6 @@ async def get_sarif_v210_log_for_scan(
         futures = []
         if not opts.SastOpts.SkipSast and "sast" in engines:
             futures.append(
-                asyncio.get_running_loop().create_task(
                     get_sast_run(
                         client,
                         opts.SastOpts,
@@ -131,13 +134,11 @@ async def get_sarif_v210_log_for_scan(
                         versions,
                         __org,
                         __info_uri,
-                    )
                 )
             )
 
         if not opts.SkipSca and "sca" in engines:
             futures.append(
-                asyncio.get_running_loop().create_task(
                     get_sca_run(
                         client,
                         project_id,
@@ -146,13 +147,11 @@ async def get_sarif_v210_log_for_scan(
                         versions,
                         __org,
                         __info_uri,
-                    )
                 )
             )
 
         if not opts.SkipKics and "kics" in engines:
             futures.append(
-                asyncio.get_running_loop().create_task(
                     get_iac_run(
                         client,
                         project_id,
@@ -161,28 +160,32 @@ async def get_sarif_v210_log_for_scan(
                         versions,
                         __org,
                         __info_uri,
-                    )
                 )
             )
 
         if not opts.SkipContainers and "containers" in engines:
             futures.append(
-                asyncio.get_running_loop().create_task(
                     get_containers_run(
                         client,
                         project_id,
                         scan_id,
                         PLATFORM_NAME,
                         versions,
+                        all_results_cache,
                         __org,
                         __info_uri,
-                    )
                 )
             )
 
+        if "microengines" in engines:
+          if not opts.SkipSecrets and __2ms_results_indicator.find(scan_details).pop().value.strip().lower() == "true":
+              futures.append(
+                  get_secrets_run(client, project_id, scan_id, PLATFORM_NAME, versions, all_results_cache, __org, __info_uri)
+                  
+              )
+
         if len(futures) > 0:
-            completed, _ = await asyncio.wait(futures)
-            results = [x.result() for x in completed]
+            results = await asyncio.gather(*futures)
         else:
             _log.warning(
                 f"No log types selected or scan {scan_id} did not execute with selected engine types."
@@ -194,7 +197,8 @@ async def get_sarif_v210_log_for_scan(
         vc_details = version_control_details_factory(scan_details)
 
         for run in results:
-            run.version_control_provenance = [vc_details]
+            if run is not None:
+              run.version_control_provenance = [vc_details]
 
         non_runs = [x for x in results if not isinstance(x, Run)]
 
