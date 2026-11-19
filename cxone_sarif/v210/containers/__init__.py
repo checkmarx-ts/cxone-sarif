@@ -11,10 +11,17 @@ async def get_containers_run(
     scan_id: str,
     platform: str,
     versions: CxOneVersions,
-    results_cache : AllResultsCache,
+    results_cache: AllResultsCache,
     organization: str,
     info_uri: str,
 ) -> Run:
     return await ContainersRun.factory(
-        client, project_id, scan_id, platform, versions.CxOne, results_cache, organization, info_uri
+        client,
+        project_id,
+        scan_id,
+        platform,
+        versions.CxOne,
+        results_cache,
+        organization,
+        info_uri,
     )

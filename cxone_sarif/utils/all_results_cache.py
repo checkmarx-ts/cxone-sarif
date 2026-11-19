@@ -46,18 +46,17 @@ class AllResultsCache:
                         [],
                     ).append(result)
 
-
     @staticmethod
-    async def __generator(result_list : List[Dict]) -> AsyncGenerator:
+    async def __generator(result_list: List[Dict]) -> AsyncGenerator:
         pos = 0
 
         while True:
-          if result_list is None or len(result_list) == 0 or pos >= len(result_list):
-              return
+            if result_list is None or len(result_list) == 0 or pos >= len(result_list):
+                return
 
-          yield result_list[pos]
+            yield result_list[pos]
 
-          pos += 1
+            pos += 1
 
     async def results_by_type(
         self, results_type: CachedResultType

@@ -2,8 +2,6 @@ import base64, urllib
 from cxone_sarif.run_factory import RunFactory
 from cxone_sarif.utils import normalize_file_uri, AllResultsCache, CachedResultType
 from cxone_api import CxOneClient
-from cxone_api.util import page_generator
-from cxone_api.low.all_scanners_results import retrieve_scan_results_all_scanners
 from sarif_om import (
     Run,
     ReportingDescriptor,
@@ -57,7 +55,7 @@ class ContainersRun(RunFactory):
         scan_id: str,
         platform: str,
         version: str,
-        all_results_cache : AllResultsCache,
+        all_results_cache: AllResultsCache,
         organization: str,
         info_uri: str,
     ) -> Run:
@@ -65,7 +63,9 @@ class ContainersRun(RunFactory):
         results = []
         rules = {}
 
-        async for result in await all_results_cache.results_by_type(CachedResultType.CONTAINERS):
+        async for result in await all_results_cache.results_by_type(
+            CachedResultType.CONTAINERS
+        ):
 
             cve_id = ContainersRun.get_value_safe("id", result)
             vuln_id = cve_id

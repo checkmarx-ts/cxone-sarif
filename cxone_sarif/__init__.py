@@ -12,7 +12,13 @@ from jsonpath_ng.ext import parse
 from jschema_to_python.to_json import to_json
 from cxone_sarif.opts import ReportOpts
 from cxone_sarif.utils import AllResultsCache
-from .v210 import get_sast_run, get_sca_run, get_iac_run, get_containers_run, get_secrets_run
+from .v210 import (
+    get_sast_run,
+    get_sca_run,
+    get_iac_run,
+    get_containers_run,
+    get_secrets_run,
+)
 from .__agent__ import __agent__
 from .__version__ import __version__
 
@@ -102,7 +108,9 @@ async def get_sarif_v210_log_for_scan(
     __info_uri = "https://docs.checkmarx.com/"
     __org = "Checkmarx"
     __details_engines = parse("$.engines")
-    __2ms_results_indicator = parse("$.metadata.configs[?(@.type == 'microengines')].value['2ms']")
+    __2ms_results_indicator = parse(
+        "$.metadata.configs[?(@.type == 'microengines')].value['2ms']"
+    )
 
     all_results_cache = AllResultsCache(client, scan_id)
 
@@ -125,47 +133,69 @@ async def get_sarif_v210_log_for_scan(
         futures = []
         if not opts.SastOpts.SkipSast and "sast" in engines:
             futures.append(
-                    get_sast_run(
-                        client,
-                        opts.SastOpts,
-                        project_id,
-                        scan_id,
-                        PLATFORM_NAME,
-                        versions,
-                        __org,
-                        __info_uri,
+                get_sast_run(
+                    client,
+                    opts.SastOpts,
+                    project_id,
+                    scan_id,
+                    PLATFORM_NAME,
+                    versions,
+                    __org,
+                    __info_uri,
                 )
             )
 
         if not opts.SkipSca and "sca" in engines:
             futures.append(
-                    get_sca_run(
-                        client,
-                        project_id,
-                        scan_id,
-                        PLATFORM_NAME,
-                        versions,
-                        __org,
-                        __info_uri,
+                get_sca_run(
+                    client,
+                    project_id,
+                    scan_id,
+                    PLATFORM_NAME,
+                    versions,
+                    __org,
+                    __info_uri,
                 )
             )
 
         if not opts.SkipKics and "kics" in engines:
             futures.append(
-                    get_iac_run(
-                        client,
-                        project_id,
-                        scan_id,
-                        PLATFORM_NAME,
-                        versions,
-                        __org,
-                        __info_uri,
+                get_iac_run(
+                    client,
+                    project_id,
+                    scan_id,
+                    PLATFORM_NAME,
+                    versions,
+                    __org,
+                    __info_uri,
                 )
             )
 
         if not opts.SkipContainers and "containers" in engines:
             futures.append(
-                    get_containers_run(
+                get_containers_run(
+                    client,
+                    project_id,
+                    scan_id,
+                    PLATFORM_NAME,
+                    versions,
+                    all_results_cache,
+                    __org,
+                    __info_uri,
+                )
+            )
+
+        if "microengines" in engines:
+            if (
+                not opts.SkipSecrets
+                and __2ms_results_indicator.find(scan_details)
+                .pop()
+                .value.strip()
+                .lower()
+                == "true"
+            ):
+                futures.append(
+                    get_secrets_run(
                         client,
                         project_id,
                         scan_id,
@@ -174,15 +204,8 @@ async def get_sarif_v210_log_for_scan(
                         all_results_cache,
                         __org,
                         __info_uri,
+                    )
                 )
-            )
-
-        if "microengines" in engines:
-          if not opts.SkipSecrets and __2ms_results_indicator.find(scan_details).pop().value.strip().lower() == "true":
-              futures.append(
-                  get_secrets_run(client, project_id, scan_id, PLATFORM_NAME, versions, all_results_cache, __org, __info_uri)
-                  
-              )
 
         if len(futures) > 0:
             results = await asyncio.gather(*futures)
@@ -198,7 +221,7 @@ async def get_sarif_v210_log_for_scan(
 
         for run in results:
             if run is not None:
-              run.version_control_provenance = [vc_details]
+                run.version_control_provenance = [vc_details]
 
         non_runs = [x for x in results if not isinstance(x, Run)]
 
