@@ -1,6 +1,7 @@
 {
   "1.2.0" : [
-    "Results for secrets scanning now included in generated logs as \"CheckmarxOne-Secrets\" tool.",
+    "Results for secrets scanning now included in generated logs as \"CheckmarxOne-Secrets\" tool",
+    "Fixed a bug where only the first 100 container security scan results were exported",
     "Dependency updates"
   ],
   "1.1.5": [

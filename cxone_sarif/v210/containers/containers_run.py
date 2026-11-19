@@ -72,6 +72,7 @@ class ContainersRun(RunFactory):
             client=client,
             scan_id=scan_id,
             limit=100,
+            offset_is_by_count=False,
         ):
 
             if not "containers" == ContainersRun.get_value_safe("type", result):
