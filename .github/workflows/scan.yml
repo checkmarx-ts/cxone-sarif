@@ -17,6 +17,7 @@ permissions:
 
 env:
   VIRTUALENV_NO_PERIODIC_UPDATE: 1
+  PIP_INDEX_URL: https://:${{ secrets.ECHO_LIBRARIES_ACCESS_KEY }}@pypi.echohq.com/simple  
 
 
 jobs:
@@ -34,9 +35,13 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Upgrade pip
+        shell: bash
+        run: |
+          pip install --upgrade pip
+
       - name: Setup Python Build Env
         run: |
-          pip config set global.index-url https://:${{ secrets.ECHO_LIBRARIES_ACCESS_KEY }}@pypi.echohq.com/simple
           pip install virtualenv
 
       - name: Scan with CxOne++ Action

@@ -1,0 +1,39 @@
+{
+  "1.2.0" : [
+    "Results for secrets scanning now included in generated logs as \"CheckmarxOne-Secrets\" tool",
+    "Fixed a bug where only the first 100 container security scan results were exported",
+    "Dependency updates"
+  ],
+  "1.1.5": [
+    "Maintenance: dependency bumps and specification updates"
+  ],
+  "1.1.4": [
+    "Maintenance: dependency bumps and specification updates"
+  ],
+  "1.1.3": [
+    "Add flags for dependency classification in SCA output",
+    "Fix interpretation of an error condition when SAST scan metadata is not available",
+    "Bump dependency versions"
+  ],
+  "1.1.2": [
+    "Update to cxone-async-api 1.1.2"
+  ],
+  "1.1.1": [
+    "Added an option to include the SAST result similarity id in the text description",
+    "Added the result viewer URL for the non-markdown text result description per SARIF &sect;3.11.6"
+  ],
+  "1.0.4": [
+    "Changes to the `get_sarif_v210_log_for_scan` entrypoint method for the module",
+    "Returned `SarifLog` object is a subclass that has a `asjson()` method that serializes the log into JSON",
+    "Optional parameters `clone_url` and `branch` will take precedence over values found in the scan information",
+    "Improved network error handling when compiling a Sarif log"
+  ],
+  "1.0.3": [
+    "A few bug fixes related to interpreting missing JSON fields for some SAST results",
+    "All \"Not Exploitable\" results are now excluded from all engines that support state triage",
+    "Added a value for the Sarif standard `level` translated from each engine's Severity concept"
+  ],
+  "1.0.2": [
+    "Detailed work to make the Sarif output more compatible with GitHub security result display."
+  ]
+}

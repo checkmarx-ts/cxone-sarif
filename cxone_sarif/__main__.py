@@ -18,10 +18,17 @@ DEFAULT_LOGLEVEL = "INFO"
 
 
 async def main():
+    # fmt: off
     """Usage: cxone-sarif [-h | --help | -v | --version] --tenant TENANT (--region REGION | (--url URL --iam-url IAMURL))
                      (--api-key APIKEY | (--client OCLIENT --secret OSECRET) | --use-env-oauth | --use-env-api-key)
                      [--level LOGLEVEL] [--log-file LOGFILE] [--timeout TIMEOUT] [--delay DELAY] [--retries RETRIES] [--proxy IP:PORT]
-                     [--outdir OUTDIR] [--no-sast] [--no-sast-apisec] [--no-sca] [--no-kics] [--no-containers]
+                     [--outdir OUTDIR]
+                     [--no-sast]
+                     [--no-sast-apisec]
+                     [--no-sca]
+                     [--no-kics]
+                     [--no-containers]
+                     [--no-secrets]
                      [--with-sast-simid] [-qk] [-t THREADS] SCANIDS...
 
     SCANIDS...          One or more space-separated scan ids that will each generate a file containing a SARIF log.
@@ -67,12 +74,13 @@ async def main():
     --no-sast           Suppress static code analysis scan results.
     --no-sast-apisec    Do not augment SAST results with API security scan results.
 
-
     --no-sca            Suppress software composition analysis scan results.
 
     --no-kics           Suppress infrastructure as code scan results.
 
     --no-containers     Suppress container security scan results.
+
+    --no-secrets        Suppress secret scan results.
 
     --outdir OUTDIR     Directory where to write the SARIF log files.   [default: .]
 
@@ -92,7 +100,7 @@ async def main():
     -q                  Do not output logs to the console.
 
     """
-
+    # fmt: on
     try:
         # The docopt module may not be installed unless the [cli] extra is installed
         # so load it dynamically when executing as a script.
@@ -128,6 +136,11 @@ async def main():
             auth_endpoint = cx.CxOneAuthEndpoint(args["--tenant"], args["--iam-url"])
             api_endpoint = cx.CxOneApiEndpoint(args["--url"])
 
+        if args["-k"]:
+            import urllib3
+
+            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
         if args["--proxy"] is not None:
             proxy = {"http": args["--proxy"], "https": args["--proxy"]}
         else:
@@ -142,33 +155,34 @@ async def main():
                 "Some scan ids that were defined multiple times, only one log will be produced per unique scan id."
             )
 
-        task_result, _ = await asyncio.wait(
-            [
-                asyncio.get_running_loop().create_task(
-                    execute_on_scanid(
-                        client,
-                        scanid,
-                        args["--outdir"],
-                        ReportOpts(
-                            SastOpts=SastOpts(
-                                SkipSast=args["--no-sast"],
-                                OmitApiResults=args["--no-sast-apisec"],
-                                AppendSimilarityId=args["--with-sast-simid"],
-                            ),
-                            SkipSca=args["--no-sca"],
-                            SkipKics=args["--no-kics"],
-                            SkipContainers=args["--no-containers"],
+        results = await asyncio.gather(
+            *[
+                execute_on_scanid(
+                    client,
+                    scanid,
+                    args["--outdir"],
+                    ReportOpts(
+                        SastOpts=SastOpts(
+                            SkipSast=args["--no-sast"],
+                            OmitApiResults=args["--no-sast-apisec"],
+                            AppendSimilarityId=args["--with-sast-simid"],
                         ),
-                        concurrency,
-                    )
+                        SkipSca=args["--no-sca"],
+                        SkipKics=args["--no-kics"],
+                        SkipContainers=args["--no-containers"],
+                        SkipSecrets=args["--no-secrets"],
+                    ),
+                    concurrency,
                 )
                 for scanid in set(args["SCANIDS"])
             ]
         )
 
-        exit(max([x.result() for x in task_result]))
+        exit(max(results))
     except ModuleNotFoundError:
-        print("The CLI interface is not operational since it appears [cli] extra is not installed.")
+        print(
+            "The CLI interface is not operational since it appears [cli] extra is not installed."
+        )
         exit(2)
     except docopt_lib.DocoptExit as bad_args:
         print("Incorrect arguments provided.")

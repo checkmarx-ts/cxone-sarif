@@ -3,7 +3,8 @@ requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "cxone_sarif"
+name = "cxone-sarif"
+readme = "README.md"
 dynamic = ["version"]
 dependencies = [
     "sarif-om>=1.0.4",
@@ -11,10 +12,16 @@ dependencies = [
     "jschema-to-python>=1.2.3",
     "dataclasses-json>=0.6.7",
     "aiofiles>=25.1.0",
-    "cxone-api@https://github.com/checkmarx-ts/cxone-async-api/releases/download/1.1.7/cxone_api-1.1.7-py3-none-any.whl"
+    "cxone-async-api==1.1.9"
 ]
 
-description = "CheckmarxOne Sarif Transformation API"
+[project.urls]
+Homepage = "https://github.com/checkmarx-ts/cxone-sarif"
+Repository = "https://github.com/checkmarx-ts/cxone-sarif"
+Documentation = "https://github.com/checkmarx-ts/cxone-sarif"
+
+
+description = "Transforms CheckmarxOne results to a standard-compliant Sarif log."
 requires-python = ">=3.10"
 
 [project.scripts]
@@ -27,5 +34,7 @@ package-dir = {"cxone_sarif" = "cxone_sarif"}
 version = { attr = "cxone_sarif.__version__.__version__" }
 
 [project.optional-dependencies]
-cli = ["docopt-ng>=0.9.0"]
+cli = [
+  "docopt-ng==0.9.0",
+]
 
